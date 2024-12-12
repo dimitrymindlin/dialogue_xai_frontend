@@ -26,3 +26,16 @@ h3 {
     color: black;
     font-size: 14px;
 }
+
+/*select dropdown*/
+.select-dropdown {
+    @apply rounded-lg bg-[whitesmoke] cursor-pointer mx-0 my-0 px-2 py-1 border border-gray-300 w-auto;
+    /* Ensure the select fits nicely within its container */
+    font-size: 0.7rem; /* Slightly smaller font for compact size */
+    line-height: 1.25; /* Adjust the line-height for better fit */
+    appearance: none;
+    outline: none;
+    transition: all 0.3s ease-in-out;
+    height: auto; /* Ensure it adapts to content */
+    padding: 0.25rem 0.5rem; /* Compact padding */
+}

@@ -1,5 +1,4 @@
 import backend from '$lib/backend';
-import {error} from '@sveltejs/kit';
 import type {PageLoad} from './$types';
 import type {TDatapointResult} from '$lib/types';
 
@@ -24,7 +23,8 @@ export const load = (async ({url}) => {
         feature_units,
         prediction_choices,
         feature_names,
-        user_study_task_description
+        user_study_task_description,
+        wq
     } = await (await backend.xai(user_id, study_group).init()).json();
 
     // Get Initial Train Datapoint
@@ -44,5 +44,6 @@ export const load = (async ({url}) => {
         feature_units,
         prediction_probability,
         datapoint,
+        wq
     }
 }) satisfies PageLoad;

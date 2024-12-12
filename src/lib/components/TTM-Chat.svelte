@@ -61,7 +61,7 @@
 <div
         class="ttm flex h-full"
 >
-    <Header>Chatbot</Header>
+    <Header>Chat</Header>
     <main
             bind:this={element}
             class="flex-1 overflow-y-auto h-full p-3"
@@ -70,17 +70,6 @@
             <Message {message} on:feedbackButtonClick={forwardEvent} on:questionClick={forwardQuestionClick}/>
         {/each}
     </main>
-    {#if user_input}
-        <div class="input-area">
-            <input class="variant-ghost-surface" bind:value={inputMessage} type="text" placeholder="Ask a question..."
-                   on:keydown={handleKeydown}/>
-            <button class="variant-ghost-primary" on:click={sendMessage}>Send</button>
-            {#if study_group === 'chat'}
-                <div class="vertical-divider"></div>
-                <SubmitButton next={next} label="Proceed"/>
-            {/if}
-        </div>
-    {/if}
 </div>
 
 

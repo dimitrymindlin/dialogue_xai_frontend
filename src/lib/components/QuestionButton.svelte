@@ -61,7 +61,7 @@
         style="font-size: 0.75rem;">
     {#if type === 'feature'}
         {@html question.split('[feature selection]')[0]}
-        <select bind:value={activeFeature} on:change={handleChange} class="inline-feature-select">
+        <select bind:value={activeFeature} on:change={handleChange} class="select-dropdown">
             <option value="" disabled>Select Attribute</option>
             {#each featureOptions as feature}
                 <option value="{feature.id.toString()}">{feature.feature_name}</option>
@@ -80,9 +80,4 @@
         max-width: 100%; /* Ensure it doesn't overflow its container */
     }
 
-    /* Style the selection field to fit nicely within the button */
-    select {
-        @apply rounded-lg bg-[whitesmoke] cursor-pointer mx-0 my-0 px-2 py-2 border-2 w-auto;
-        /* Adjust margin and padding to fit within the button */
-    }
 </style>

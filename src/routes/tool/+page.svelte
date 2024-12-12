@@ -42,7 +42,9 @@
     let initial_message: TChatMessage;
 
     let feature_names = data.feature_names;
+    let wq = data.wq;
     let {feature_questions, general_questions}: TQuestionResult = data.questions;
+    const study_group = 'interactive';
     delete data.datapoint.true_label;
 
     function get_feature_id_from_name(featureName, feature_names) {
@@ -191,9 +193,9 @@
 
     function setNewCurrentDatapoint() {
         messages = [initial_message];
-        true_label = <string>new_datapoint.true_label;
+        //true_label = <string>new_datapoint.true_label;
+        //delete new_datapoint.true_label;
         ml_label_prediction = <string>new_datapoint.ml_prediction;
-        delete new_datapoint.true_label;
         delete new_datapoint.ml_prediction;
         current_datapoint = new_datapoint;
         datapoint_answer_selected = null; // Reset selected answer
@@ -203,7 +205,18 @@
         // Get the next datapoint
         let result = await (await backend.xai(user_id).get_train_datapoint()).json() as TDatapointResult;
         initial_message = result.initial_message;
-        current_datapoint = result;
+        new_datapoint = result;
+        //-----------------------------------------------------------------
+        datapoint_answer_selected = null;
+        setNewCurrentDatapoint();
+    }
+
+    async function handleQuartierChange(e: any) {
+        // Get the selected quartier
+        let selectedQuartier = e.detail.selectedQuartier;
+        let result = await (await backend.xai(user_id, study_group, selectedQuartier).get_production_datapoint()).json() as TDatapointResult;
+        initial_message = result.initial_message;
+        new_datapoint = result;
         //-----------------------------------------------------------------
         datapoint_answer_selected = null;
         setNewCurrentDatapoint();
@@ -242,9 +255,11 @@
             bind:datapoint_count
             feature_names={feature_names}
             feature_units={feature_units}
+            wohnquartiere={wq}
             feature_tooltips={feature_tooltips}
             prediction_probability={prediction_probability}
             on:next={handleNext}
+            on:quartierChange={handleQuartierChange}
     />
 </div>
 <div class="col-start-2 col-end-3 overflow-y-scroll">

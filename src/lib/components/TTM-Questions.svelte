@@ -51,7 +51,7 @@
     <form class="grid">
         <div class="row-[1]">
             <Header>
-                <p>General Questions</p>
+                <p>Generelle Fragen</p>
             </Header>
             <div class="mx-1.5">
                 {#each general_questions as question}
@@ -63,7 +63,7 @@
 
         <div class="row-[2]">
             <Header>
-                <p>Attribute Related Questions</p>
+                <p>Attributbezogene Fragen</p>
             </Header>
             <div class="mx-1.5">
                 {#each feature_questions as question}
@@ -73,7 +73,6 @@
                 {/each}
             </div>
         </div>
-        <input type="submit" value="Proceed" style="width: 70%;" on:click|preventDefault={next}/>
     </form>
 </div>
 
