@@ -1,14 +1,14 @@
 <script lang="ts">
     import Datapoint from './Datapoint.svelte';
     import Header from "$lib/components/Header.svelte";
-    import type { PredictionProbability } from "$lib/types";
+    import type {PredictionProbability} from "$lib/types";
     import '$lib/../global.css';
-    import { base } from '$app/paths';
-    import { createEventDispatcher, onMount, onDestroy } from "svelte";
+    import {base} from '$app/paths';
+    import {createEventDispatcher} from "svelte";
 
     export let feature_names;
-    export let data: { [key: string]: string };
     export let feature_tooltips: { [key: string]: string };
+    export let data: { title: string; items: [string, string][] }[];
     export let feature_units: { [key: string]: string };
     export let wohnquartiere: { wohnquartiere: number[] };
     export let prediction_probability: PredictionProbability[];
@@ -18,7 +18,7 @@
 
     async function handleQuartierChange(event) {
         selectedQuartier = event.target.value;
-        dispatch('quartierChange', { selectedQuartier });
+        dispatch('quartierChange', {selectedQuartier});
     }
 
 </script>
@@ -39,27 +39,27 @@
 
     <main class="main-content">
         <Datapoint
-            header={['Attribute', 'Value']}
-            body={Object.keys(data).map((key) => [key, data[key].toString()])}
-            feature_tooltips={feature_tooltips}
-            feature_units={feature_units}
-            feature_names={feature_names}
+                header={['Attribute', 'Value']}
+                grouped_data={data.displayable_features}
+                feature_tooltips={feature_tooltips}
+                feature_units={feature_units}
+                feature_names={feature_names}
         />
     </main>
 
     <div class="map-container">
         <iframe
-            src="{base}/colored_kgs_map_with_click.html"
-            width="100%"
-            height="100%"
-            allowfullscreen
+                src="{base}/colored_kgs_map_with_click.html"
+                width="100%"
+                height="100%"
+                allowfullscreen
         ></iframe>
     </div>
 
     {#if prediction_probability && prediction_probability.length > 0}
         <div class="prediction-container">
             <h2 class="prediction-title">Prediction Probabilities</h2>
-            {#each prediction_probability as { label, probability }}
+            {#each prediction_probability as {label, probability}}
                 <div class="prediction-item">
                     <p class="prediction-label">{label}</p>
                     <progress class="prediction-progress" value={probability * 100} max="100"></progress>
@@ -82,7 +82,9 @@
         display: flex;
         align-items: center;
         gap: 1rem;
-        margin-top: 1rem;
+        margin: 1rem 0;
+        padding-right: 1rem;
+        padding-left: 1rem;
     }
 
     .select-label {
@@ -93,7 +95,7 @@
 
     .select-dropdown {
         flex-grow: 1;
-        padding: 0.5rem;
+        padding: 0.3rem;
         font-size: 1rem;
     }
 
@@ -131,6 +133,7 @@
             max-height: 95vh;
         }
     }
+
     progress::-webkit-progress-value {
         background-color: green;
     }
