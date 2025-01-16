@@ -33,6 +33,7 @@
     let ml_label_prediction: string = data.datapoint.ml_prediction;
     let user_id: string = data.user_id;
     let new_datapoint: TDatapoint;
+    let awaitingResponse = false;
     //-----------------------------------------------------------------
 
     /**
@@ -148,6 +149,7 @@
     }
 
     async function submitWrittenQuestion(e: any) {
+        awaitingResponse = true;
         const user_message = e.detail.message;
         createAndPushMessage(user_message, true, false, "0");
         messages = messages;
@@ -187,6 +189,7 @@
                     details: details,
                 })
             });
+            awaitingResponse = false;
         }, 700);
     }
 

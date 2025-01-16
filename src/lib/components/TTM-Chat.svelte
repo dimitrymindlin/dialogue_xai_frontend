@@ -11,6 +11,7 @@
     let inputMessage = '';
     export let user_input = true;
     export let study_group = '';
+    export let awaitingResponse = false;
 
     let autoscroll = false;
 
@@ -20,7 +21,7 @@
         dispatch('feedbackButtonClick', event.detail);
     }
 
-     function forwardQuestionClick(event) {
+    function forwardQuestionClick(event) {
         dispatch('questionClick', event.detail);
     }
 
@@ -63,9 +64,16 @@
 >
     <Header>Chat</Header>
     <main
+
             bind:this={element}
             class="flex-1 overflow-y-auto h-full p-3"
     >
+        {#if awaitingResponse}
+            <div class="processing-message">
+                <span class="spinner"></span>
+                <p>Generating response...</p>
+            </div>
+        {/if}
         {#each messages as message}
             <Message {message} on:feedbackButtonClick={forwardEvent} on:questionClick={forwardQuestionClick}/>
         {/each}
@@ -74,6 +82,31 @@
 
 
 <style lang="postcss">
+    .processing-message {
+        background: #f7f7f7;
+        padding: 0.75rem;
+        margin: 0.5rem 0;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .spinner {
+        width: 24px;
+        height: 24px;
+        border: 3px solid #ccc;
+        border-top-color: #333;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
     .ttm {
         flex-flow: column wrap;
         background: var(--ttm-bg);

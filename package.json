@@ -46,6 +46,7 @@
     "@types/dom-view-transitions": "1.0.3",
     "postgres": "^3.4.3",
     "random-word-slugs": "^0.1.7",
+    "svelte-select": "^5.8.3",
     "uuid": "^9.0.1"
   }
 }

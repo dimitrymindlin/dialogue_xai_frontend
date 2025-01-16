@@ -38,9 +38,10 @@
             </tr>
             <!-- Grouped Items -->
             {#each group.items as row}
+
                 <tr class="{row[1].includes('Current:') ? 'highlighted' : ''}">
                     <td>
-                        <span>{row[0]}</span>
+                        <span>{row[0].split('-')[1]}</span>
                         {#if feature_tooltips[row[0].toLowerCase()]}
                             <TooltipIcon class="tooltipIcon" message={feature_tooltips[row[0].toLowerCase()]}/>
                         {/if}
@@ -107,7 +108,6 @@
 
     /* Compact Styles for Group Titles */
     .group-title td div {
-        background-color: #f0f0f0; /* Light background for group titles */
         font-size: 0.9rem; /* Smaller font size */
         text-align: left;
     }

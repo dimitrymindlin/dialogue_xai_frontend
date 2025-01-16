@@ -1,10 +1,11 @@
 <script lang="ts">
+    import Select from 'svelte-select';
     import Datapoint from './Datapoint.svelte';
     import Header from "$lib/components/Header.svelte";
-    import type {PredictionProbability} from "$lib/types";
+    import type { PredictionProbability } from "$lib/types";
     import '$lib/../global.css';
-    import {base} from '$app/paths';
-    import {createEventDispatcher} from "svelte";
+    import { base } from '$app/paths';
+    import { createEventDispatcher } from "svelte";
 
     export let feature_names;
     export let feature_tooltips: { [key: string]: string };
@@ -14,27 +15,53 @@
     export let prediction_probability: PredictionProbability[];
 
     const dispatch = createEventDispatcher();
-    let selectedQuartier = "";
+    let selectedQuartier: { label: string; value: string } | null = null;
 
-    async function handleQuartierChange(event) {
-        selectedQuartier = event.target.value;
-        dispatch('quartierChange', {selectedQuartier});
+    const options = wohnquartiere.wohnquartiere.map(num => ({
+        label: String(num),
+        value: String(num) // Ensures the value is a string
+    }));
+
+    // **Updated handleChange Function**
+    function handleChange(event: CustomEvent<{ label: string; value: string } | null>) {
+        const selected = event.detail;
+        if (selected) {
+            selectedQuartier = selected; // Set the selected option object
+            dispatch('quartierChange', { selectedQuartier: selectedQuartier.value });
+        } else {
+            selectedQuartier = null;
+            dispatch('quartierChange', { selectedQuartier: null });
+        }
     }
 
+    // **Updated handle_focus Function**
+    function handle_focus() {
+        selectedQuartier = null; // Clear the current selection
+    }
 </script>
 
 <div class="inputarea">
     <Header>Übersicht</Header>
 
+    <div class="map-container">
+        <iframe
+                src="{base}/map_DO.html"
+                width="100%"
+                height="100%"
+                allowfullscreen
+        ></iframe>
+    </div>
+
     <div class="select-container">
-        <label for="quartier-select" class="select-label">Quartier</label>
-        <select id="quartier-select" bind:value={selectedQuartier} on:change={handleQuartierChange}
-                class="select-dropdown">
-            <option value="" disabled selected>Suchen ...</option>
-            {#each wohnquartiere.wohnquartiere as quartier}
-                <option value={quartier}>{quartier}</option>
-            {/each}
-        </select>
+        <Select
+                items={options}
+                bind:value={selectedQuartier}
+                on:change={handleChange}
+                on:focus={handle_focus}
+                placeholder="KGS suchen..."
+                searchable
+                clearable
+        />
     </div>
 
     <main class="main-content">
@@ -46,15 +73,6 @@
                 feature_names={feature_names}
         />
     </main>
-
-    <div class="map-container">
-        <iframe
-                src="{base}/colored_kgs_map_with_click.html"
-                width="100%"
-                height="100%"
-                allowfullscreen
-        ></iframe>
-    </div>
 
     {#if prediction_probability && prediction_probability.length > 0}
         <div class="prediction-container">
@@ -87,17 +105,6 @@
         padding-left: 1rem;
     }
 
-    .select-label {
-        font-size: 1.1rem;
-        font-weight: bold;
-        color: var(--text-color, #333);
-    }
-
-    .select-dropdown {
-        flex-grow: 1;
-        padding: 0.3rem;
-        font-size: 1rem;
-    }
 
     .main-content {
         flex: 1;

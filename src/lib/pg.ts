@@ -250,3 +250,5 @@ export async function assignFinishedProlificParticipant(user_id: string) {
         WHERE user_id = ${user_id}
     `;
 }
+
+// Function to download sql dump of the database
