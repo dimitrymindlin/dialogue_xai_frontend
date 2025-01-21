@@ -7,8 +7,6 @@ services:
       - "3000:3000"
     depends_on:
       - db
-    networks:
-      - xai-network
 
   db:
     build:
@@ -23,26 +21,6 @@ services:
       - "5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
-    networks:
-      - xai-network
-
-  nginx:
-    image: nginx:latest
-    container_name: nginx
-    ports:
-      - "80:80"
-      - "443:443"  # Expose port 443 for HTTPS
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./certs:/etc/nginx/certs  # Mount the directory containing SSL certificates
-    depends_on:
-      - experiment
-    networks:
-      - xai-network
 
 volumes:
   db-data:
-
-networks:
-  xai-network:
-    external: true
