@@ -3,11 +3,10 @@
     export let grouped_data: { title: string; items: string[][] }[] = []
     export let feature_tooltips: { [key: string]: string };
     export let feature_units: { [key: string]: string };
+    let showAdditionalInfo = false; // controls the toggle for "additional info"
     export let feature_names: TFeatureName[];
     import TooltipIcon from './TooltipIcon.svelte';
     import type {TFeatureName} from '$lib/types';
-
-    console.log(grouped_data);
 
     // Normalize a string by removing spaces and converting to lower case for comparison
     function normalizeString(str: string): string {
@@ -33,32 +32,48 @@
                 <td colspan={header.length}>
                     <div>
                         <strong>{group.title}</strong>
+
+                        <!-- If group title is "additional info", show a toggle button -->
+                        {#if group.title === "additionalInfo"}
+                            <button on:click={() => showAdditionalInfo = !showAdditionalInfo}>
+                                {showAdditionalInfo ? 'Weniger Infos' : 'Mehr Infos'}
+                            </button>
+                        {/if}
                     </div>
                 </td>
             </tr>
-            <!-- Grouped Items -->
-            {#each group.items as row}
 
-                <tr class="{row[1].includes('Current:') ? 'highlighted' : ''}">
-                    <td>
-                        <span>{row[0].split('-')[1]}</span>
-                        {#if feature_tooltips[row[0].toLowerCase()]}
-                            <TooltipIcon class="tooltipIcon" message={feature_tooltips[row[0].toLowerCase()]}/>
-                        {/if}
-                    </td>
-                    <td>
-                        {#if row[1].includes('Current:')}
-                            {@html row[1].replace(/Current: ([^,]+), Old: (.+)/, (match, current, old) =>
-                                `<strong>${current}</strong> <s>${old}</s>`)}
-                        {:else}
-                            <span>{row[1]}</span>
-                        {/if}
-                        {#if feature_units[row[0].toLowerCase()]}
-                            <span> {feature_units[row[0].toLowerCase()]}</span>
-                        {/if}
-                    </td>
-                </tr>
-            {/each}
+            <!-- Grouped Items -->
+            <!-- If group title is "additional info", conditionally show items based on toggle -->
+            {#if group.title !== "additionalInfo" || showAdditionalInfo}
+                {#each group.items as row}
+                    <tr class="{row[1].includes('Current:') ? 'highlighted' : ''}">
+                        <td>
+                            {#if group.title === 'additionalInfo'}
+                                <!-- Show the entire row[0] if it's additionalInfo -->
+                                <span>{row[0]}</span>
+                            {:else}
+                                <!-- Otherwise, keep splitting row[0] -->
+                                <span>{row[0].split('-')[1]}</span>
+                            {/if}
+                            {#if feature_tooltips[row[0].toLowerCase()]}
+                                <TooltipIcon class="tooltipIcon" message={feature_tooltips[row[0].toLowerCase()]}/>
+                            {/if}
+                        </td>
+                        <td>
+                            {#if row[1].includes('Current:')}
+                                {@html row[1].replace(/Current: ([^,]+), Old: (.+)/, (match, current, old) =>
+                                    `<strong>${current}</strong> <s>${old}</s>`)}
+                            {:else}
+                                <span>{row[1]}</span>
+                            {/if}
+                            {#if feature_units[row[0].toLowerCase()]}
+                                <span> {feature_units[row[0].toLowerCase()]}</span>
+                            {/if}
+                        </td>
+                    </tr>
+                {/each}
+            {/if}
         {/each}
         </tbody>
     </table>
