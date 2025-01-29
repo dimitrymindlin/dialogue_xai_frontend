@@ -2,10 +2,10 @@
     import Select from 'svelte-select';
     import Datapoint from './Datapoint.svelte';
     import Header from "$lib/components/Header.svelte";
-    import type { PredictionProbability } from "$lib/types";
+    import type {PredictionProbability} from "$lib/types";
     import '$lib/../global.css';
-    import { base } from '$app/paths';
-    import { createEventDispatcher } from "svelte";
+    import {base} from '$app/paths';
+    import {createEventDispatcher} from "svelte";
 
     export let feature_names;
     export let feature_tooltips: { [key: string]: string };
@@ -23,14 +23,19 @@
     }));
 
     // **Updated handleChange Function**
+    let activeTab: 'map' | 'instance' = 'map';
+
+    // When a search is performed (handleChange is triggered),
+    // switch to the instance tab automatically.
     function handleChange(event: CustomEvent<{ label: string; value: string } | null>) {
         const selected = event.detail;
         if (selected) {
-            selectedQuartier = selected; // Set the selected option object
-            dispatch('quartierChange', { selectedQuartier: selectedQuartier.value });
+            selectedQuartier = selected;
+            dispatch('quartierChange', {selectedQuartier: selectedQuartier.value});
+            activeTab = 'instance'; // Switch to instance tab
         } else {
             selectedQuartier = null;
-            dispatch('quartierChange', { selectedQuartier: null });
+            dispatch('quartierChange', {selectedQuartier: null});
         }
     }
 
@@ -40,52 +45,60 @@
     }
 </script>
 
+
+<!-- Tab navigation buttons -->
 <div class="inputarea">
-    <Header>Übersicht</Header>
-
-    <div class="map-container">
-        <iframe
-                src="{base}/map_DO.html"
-                width="100%"
-                height="100%"
-                allowfullscreen
-        ></iframe>
+    <Header>
+        <p>Wohnquartiere</p>
+    </Header>
+    <div class="tab-buttons">
+        <button
+                on:click={() => activeTab = 'map'}
+                class:active={activeTab === 'map'}
+        >
+            Karte
+        </button>
+        <button
+                on:click={() => activeTab = 'instance'}
+                class:active={activeTab === 'instance'}
+        >
+            Wohnquartier
+        </button>
     </div>
 
-    <div class="select-container">
-        <Select
-                items={options}
-                bind:value={selectedQuartier}
-                on:change={handleChange}
-                on:focus={handle_focus}
-                placeholder="KGS suchen..."
-                searchable
-                clearable
-        />
-    </div>
-
-    <main class="main-content">
-        <Datapoint
-                header={['Attribute', 'Value']}
-                grouped_data={data.displayable_features}
-                feature_tooltips={feature_tooltips}
-                feature_units={feature_units}
-                feature_names={feature_names}
-        />
-    </main>
-
-    {#if prediction_probability && prediction_probability.length > 0}
-        <div class="prediction-container">
-            <h2 class="prediction-title">Prediction Probabilities</h2>
-            {#each prediction_probability as {label, probability}}
-                <div class="prediction-item">
-                    <p class="prediction-label">{label}</p>
-                    <progress class="prediction-progress" value={probability * 100} max="100"></progress>
-                    <p class="prediction-value">{probability}</p>
-                </div>
-                <hr>
-            {/each}
+    {#if activeTab === 'map'}
+        <div class="map-container">
+            <iframe
+                    src="{base}/map_DO.html"
+                    width="100%"
+                    height="100%"
+                    allowfullscreen
+            ></iframe>
         </div>
+
+        <div class="select-container">
+            <Select
+                    items={options}
+                    bind:value={selectedQuartier}
+                    on:change={handleChange}
+                    on:focus={handle_focus}
+                    placeholder="KGS suchen..."
+                    searchable
+                    clearable
+            />
+        </div>
+    {/if}
+
+    {#if activeTab === 'instance'}
+        <main class="main-content">
+            <Datapoint
+                    header={['Attribute', 'Value']}
+                    grouped_data={data.displayable_features}
+                    feature_tooltips={feature_tooltips}
+                    feature_units={feature_units}
+                    feature_names={feature_names}
+            />
+        </main>
     {/if}
 </div>
 
@@ -147,5 +160,29 @@
 
     progress::-moz-progress-bar {
         background-color: green;
+    }
+
+    .tab-buttons {
+        display: flex;
+        border-bottom: 1px solid #ccc;
+        margin: 1rem 0;
+    }
+
+    .tab-buttons button {
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        transition: border-color 0.2s ease;
+    }
+
+    .tab-buttons button:hover {
+        background-color: #eee;
+    }
+
+    .tab-buttons button.active {
+        font-weight: bold;
+        border-bottom-color: #007bff; /* your highlight color */
     }
 </style>

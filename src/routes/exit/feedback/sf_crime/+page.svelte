@@ -3,10 +3,13 @@
     import {base} from '$app/paths';
     import backend from "$lib/backend";
     import {goto} from "$app/navigation";
-    import {PUBLIC_DATASET_NAME} from '$env/static/public';
     // Get user_id from URL
     const urlParams = new URLSearchParams(window.location.search);
     const user_id = urlParams.get('user_id');
+    import { env } from '$env/dynamic/public';
+
+    const PUBLIC_DATASET_NAME = env.PUBLIC_DATASET_NAME;
+
 
     async function handleFeedbackSubmit(event) {
         const {feedback} = event.detail;

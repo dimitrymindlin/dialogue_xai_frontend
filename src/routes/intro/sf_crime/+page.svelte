@@ -3,9 +3,11 @@
     import {base} from '$app/paths';
     import {Step, Stepper} from '@skeletonlabs/skeleton';
     import {onMount} from 'svelte';
-    import {PUBLIC_TEACH_TEST_CYCLES} from "$env/static/public";
     import {v4 as uuidv4} from 'uuid';
-    import {PUBLIC_DATASET_NAME} from '$env/static/public';
+
+    import {env} from '$env/dynamic/public';
+
+    const PUBLIC_TEACH_TEST_CYCLES = env.PUBLIC_TEACH_TEST_CYCLES;
 
     let gender: string;
     let gender_self_identify: string;
@@ -84,7 +86,8 @@
     <Stepper buttonCompleteLabel="Start Experiment" on:complete={onComplete}>
         <Step>
             <p>
-                This is an introductory activity on <b>understanding the decision process of Artificial Intelligence (AI) models</b>
+                This is an introductory activity on <b>understanding the decision process of Artificial Intelligence
+                (AI) models</b>
                 which takes about 15-20 minutes. It is designed to introduce you to the type of explanations that
                 we work with and should prepare you for the in-person workshop.<br/>
             </p>
@@ -134,12 +137,12 @@
                         <b>guess the Machine Learning model's decision</b>.
                     </li>
                     <li>
-                    {#if study_group === 'interactive'}
-                        {@html study_group_interactive_text}
-                    {:else}
-                        {@html study_group_static_text}
-                    {/if}
-                    When you feel that you understand the reason for the models decision, proceed by clicking <b>Proceed</b>.
+                        {#if study_group === 'interactive'}
+                            {@html study_group_interactive_text}
+                        {:else}
+                            {@html study_group_static_text}
+                        {/if}
+                        When you feel that you understand the reason for the models decision, proceed by clicking <b>Proceed</b>.
                     </li>
                     <li><b style="color: purple;">Testing Phase:</b> Guess the model prediction for a new district based
                         on your
@@ -160,7 +163,8 @@
                 all about estimating what the model would predict based on the explanations you see.</p>
             <br>
             <p>
-                Please do not use the <b>browser's back button</b> during the experiment. This will cause the <b>whole experiment to
+                Please do not use the <b>browser's back button</b> during the experiment. This will cause the <b>whole
+                experiment to
                 restart</b>.
                 <br>
                 <br>

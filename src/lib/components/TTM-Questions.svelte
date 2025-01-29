@@ -16,7 +16,7 @@
     let activeFeature = "";
 
     // Delete KGS22 from feature_questions_dropdown
-    feature_questions_dropdown = feature_questions_dropdown.filter(f => f.feature_name !== 'KGS22');
+    feature_questions_dropdown = feature_questions_dropdown.filter(f => f.feature_name !== 'Wohnquartier ID');
 
     // Replace the placeholder in the questions with the actual value
     // Do this for both general_questions and feature_questions

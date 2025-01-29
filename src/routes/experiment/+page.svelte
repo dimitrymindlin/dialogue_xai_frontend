@@ -11,7 +11,6 @@
     import backend from '$lib/backend';
     import {fade} from 'svelte/transition';
     import type {PageData} from '../';
-    import {PUBLIC_TEACH_TEST_CYCLES, PUBLIC_END_TEST_CYCLES} from '$env/static/public';
 
     import {goto} from '$app/navigation';
     import {base} from '$app/paths';
@@ -21,6 +20,11 @@
     import QuestionRankingPopup from '$lib/components/QuestionRanking-Popup.svelte';
     import IntroDonePopup from '$lib/components/Intro-Done-Popup.svelte';
     import Spinner from '$lib/components/Spinner.svelte';
+    import {env} from '$env/dynamic/public';
+
+    const PUBLIC_TEACH_TEST_CYCLES = env.PUBLIC_TEACH_TEST_CYCLES;
+    const PUBLIC_END_TEST_CYCLES = env.PUBLIC_END_TEST_CYCLES;
+
 
     /**
      * Data provided by the `+page.ts` load function in the same folder
@@ -111,7 +115,6 @@
         // Return the id or null if not found
         return foundFeature ? foundFeature.id : null;
     }
-
 
 
     function createAndPushMessage(text: string,

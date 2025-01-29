@@ -12,12 +12,6 @@
 2. start the backend (python server)
 3. npm run dev
 
-## Paths
-
-- `/` currently the intro
-- `/experiment` the chatbot experiment
-- `/exit` the exit questionnaire, sometimes not working
-
 ## Settings
 
 - create `.env` (see `.env.template`) file in root directory and set
