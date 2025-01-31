@@ -7,7 +7,7 @@
     export let feature_names: TFeatureName[];
     import TooltipIcon from './TooltipIcon.svelte';
     import type {TFeatureName} from '$lib/types';
-    
+
     let additionalInfoName = "Ergänzende Informationen";
 
     // Normalize a string by removing spaces and converting to lower case for comparison
@@ -112,6 +112,7 @@
     .table tbody td:first-child {
         width: 30%; /* Left column takes 70% */
         text-align: left; /* Align text to the left */
+        padding-left: 1rem; /* or however big you want the indent */
     }
 
     .table tbody td:last-child {
@@ -169,5 +170,10 @@
     .tab-buttons button.active {
         background-color: #ddd;
         font-weight: bold;
+    }
+
+    .group-title td {
+        text-align: left !important;
+        padding-left: 0.5rem !important;
     }
 </style>
