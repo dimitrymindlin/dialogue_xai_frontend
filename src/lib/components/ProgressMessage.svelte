@@ -1,9 +1,10 @@
 <script lang="ts">
     import {onMount, onDestroy} from 'svelte';
     import {typewriter} from '$lib/typewriter';
+    import LoadingCircle from '$lib/components/LoadingCircle.svelte';
 
     // Define the list of progress labels.
-    const states = new Array(30).fill('...');
+    const states = ['Thinking...', 'Processing...'];
 
     let currentStateIndex = 0;
     let currentState = states[currentStateIndex];
@@ -57,14 +58,156 @@
 
 <!-- Use the same bubble structure and styling as your non-user messages -->
 <div class="flex items-end mb-2.5 left-msg">
-    <div class="msg-bubble max-w-md p-2.5 rounded-2xl" bind:this={container}>
-        <!-- The text will be inserted and animated by the typewriter action -->
+    <div class="msg-bubble max-w-md p-2.5 rounded-2xl bg-surface-700">
+        <div class="loading-container">
+            <div class="planet">
+                <div class="ring"></div>
+                <div class="inner-planet"></div>
+            </div>
+            <div bind:this={container} class="loading-text">
+                <!-- The text will be inserted and animated by the typewriter action -->
+            </div>
+        </div>
     </div>
 </div>
 
 <style lang="postcss">
-    /* Adapted from your message bubble styling for non-user messages */
     .left-msg .msg-bubble {
-        @apply rounded-bl-none variant-ghost-surface;
+        @apply rounded-bl-none;
+        background: rgba(30, 41, 59, 0.8);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .loading-container {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 12px;
+        position: relative;
+        overflow: visible;
+        padding: 4px 2px;
+        min-height: 35px;
+    }
+
+    .planet {
+        position: relative;
+        width: 25px;
+        height: 25px;
+        animation: float 3s ease-in-out infinite;
+        transform-origin: center center;
+    }
+
+    .inner-planet {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            110deg,
+            #063970 10%,
+            #1e90ff 25%,
+            #63a4ff 30%,
+            #2ecc71 48%,
+            #1e90ff 55%,
+            #63a4ff 70%,
+            #063970 90%
+        );
+        background-size: 250% 250%;
+        border-radius: 50%;
+        box-shadow: 
+            inset -4px -4px 8px rgba(0, 0, 0, 0.5),
+            inset 4px 4px 8px rgba(255, 255, 255, 0.3),
+            0 0 5px rgba(30, 144, 255, 0.2);
+        animation: 
+            rotate 6s linear infinite,
+            moveGradient 3s ease infinite;
+    }
+
+    .ring {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 35px;
+        height: 35px;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+    }
+
+    .ring::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: 1.5px solid transparent;
+        border-top: 1.5px solid #1e90ff;
+        border-right: 1.5px solid #1e90ff;
+        border-radius: 50%;
+        animation: spin 3s linear infinite;
+    }
+
+    .ring::after {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        width: calc(100% + 4px);
+        height: calc(100% + 4px);
+        border: 1.5px solid rgba(30, 144, 255, 0.2);
+        border-radius: 50%;
+        box-shadow: 0 0 10px rgba(30, 144, 255, 0.2);
+    }
+
+    .loading-text {
+        color: #1e90ff;
+        font-size: 14px;
+        font-weight: 500;
+        opacity: 1;
+        padding: 2px 0;
+        line-height: 1.2;
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    @keyframes rotate {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    @keyframes moveGradient {
+        0% {
+            background-position: 0% 50%;
+        }
+        50% {
+            background-position: 100% 50%;
+        }
+        100% {
+            background-position: 0% 50%;
+        }
+    }
+
+    @keyframes float {
+        0% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-4px);
+        }
+        100% {
+            transform: translateY(0);
+        }
     }
 </style>
