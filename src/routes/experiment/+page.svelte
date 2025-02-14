@@ -249,7 +249,6 @@
     }
 
     async function handleNext(e: any) {
-        console.log("Handling Next", experiment_phase, datapoint_count);
         // Check if clicked twice
         if (handlingNext) {
             return;
@@ -378,7 +377,6 @@
     }
 
     async function setUserPrediction(event) {
-        console.log("Setting Prediction", experiment_phase, datapoint_count, event.detail.user_prediction);
         try {
             const response = await backend.xai(user_id).set_user_prediction(
                 experiment_phase,

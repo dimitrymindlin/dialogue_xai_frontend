@@ -172,7 +172,7 @@
                 Machine Learning can be used to recognize patterns from past years of census data.<br/><br/>
 
                 In this experiment, you will <b>discover why Machine Learning model's predict a specific outcome</b>.
-                The model was trained <b>on 1994 data</b>, so the situation differs from today's reality.
+                The model was trained <b>on data before the 20th century</b>, so the situation differs from today's reality.
             </p>
         </Step>
         <Step>
@@ -190,8 +190,8 @@
             <h2 class="text-2xl">Experiment Structure</h2>
             <div class="container">
                 <div>
-                    <h3><b style="color: dodgerblue;">Introduction Phase:</b> Using information about an individual, <b>try
-                        to guess the yearly income to the best of your knowledge</b>.</h3>
+                    <h3><b style="color: dodgerblue;">Introduction Phase:</b> Looking at the attributes of the person, <b>try
+                        to guess whether the individual earns more or lass than 50k a year by your intuition</b>.</h3>
                     <img alt="Step1 gif" src={step1_gif_path} style="height: 50vh;"/>
                 </div>
             </div>
@@ -200,8 +200,8 @@
             <!-- Learning Phase -->
             <h2 class="text-2xl">Experiment Structure</h2>
             <div class="container">
-                <h3><b style="color: green;">Learning Phase:</b> After guessing the individual's income,</h3>
-                <p>You can see the Machine Learning model's prediction and get explanations for the prediction.</p>
+                <h3><b style="color: green;">Learning Phase:</b> Look at the attributes of the person and give a guess, whether this person earns more or less than 50k a year.</h3>
+                <p>Afterward, you can see the Machine Learning model's prediction and request explanations for the prediction.</p>
                 {#if study_group === 'interactive'}
                     {@html study_group_interactive_text}
                     <img alt="Step2 gif" src={step2_gif_path_interactive} style="height: 50vh;"/>
@@ -237,7 +237,7 @@
                 <p><b>Predict the model's output for a new individual</b> without access to the model's prediction or
                     explanations.</p>
                 <img alt="Step4 gif" src={step4_gif_path} style="height: 50vh;"/>
-                <p>In this last phase, correct answers give points and participants in the <b>top 10% qualify for a
+                <p>In this phase, correct answers give points and participants in the <b>top 10% qualify for a
                     bonus payment</b>.</p>
             </div>
         </Step>
