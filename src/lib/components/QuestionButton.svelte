@@ -76,7 +76,7 @@
 <style lang="postcss">
     /* Style the buttons to adapt to container width */
     button {
-        @apply rounded-lg w-full whitespace-normal my-[5px] px-2 py-3.5 text-sm;
+        @apply rounded-lg w-full whitespace-normal my-1.5 px-3 py-2 text-sm;
         max-width: 100%; /* Ensure it doesn't overflow its container */
     }
 
