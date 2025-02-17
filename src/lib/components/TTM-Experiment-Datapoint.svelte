@@ -1,5 +1,4 @@
 <script lang="ts">
-    import {PUBLIC_TEACH_TEST_CYCLES, PUBLIC_END_TEST_CYCLES} from '$env/static/public';
     import {ListBox, ListBoxItem} from '@skeletonlabs/skeleton';
     import Header from './Header.svelte';
     import Datapoint from './Datapoint.svelte';
@@ -8,8 +7,11 @@
     import FeedbackWindow from "$lib/components/FeedbackWindow.svelte";
     import {createEventDispatcher} from "svelte";
     import '$lib/../global.css';
+    import { env } from '$env/dynamic/public';
 
     const dispatch = createEventDispatcher();
+    const PUBLIC_TEACH_TEST_CYCLES = env.PUBLIC_TEACH_TEST_CYCLES;
+    const PUBLIC_END_TEST_CYCLES = env.PUBLIC_END_TEST_CYCLES;
 
     export let experimentPhase: TTestOrTeaching;
     export let interactiveOrStatic: TInteractiveOrStatic;

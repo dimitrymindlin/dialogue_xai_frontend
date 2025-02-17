@@ -3,8 +3,9 @@
     import {base} from '$app/paths';
     import {Step, Stepper} from '@skeletonlabs/skeleton';
     import {onMount} from 'svelte';
-    import {PUBLIC_TEACH_TEST_CYCLES} from "$env/static/public";
     import {userId} from "$lib/shared";
+    import { env } from '$env/dynamic/public';
+    const PUBLIC_TEACH_TEST_CYCLES = env.PUBLIC_TEACH_TEST_CYCLES;
 
     let gender: string;
     let gender_self_identify: string;
@@ -172,26 +173,31 @@
                 Machine Learning can be used to recognize patterns from past years of census data.<br/><br/>
 
                 In this experiment, you will <b>discover why Machine Learning model's predict a specific outcome</b>.
-                The model was trained <b>on data before the 20th century</b>, so the situation differs from today's reality.
+                The model was trained <b>on data before the 20th century</b>, so the situation differs from today's
+                reality.
             </p>
         </Step>
         <Step>
             <h2 class="text-2xl">
                 Concrete Example
             </h2>
-            <p>For example, look at the individual with the following information (attributes and their values):</p>
-            <img src="{base}/adult_datapoint.png" alt="Adult Datapoint img" style="width: 25vw;">
-            <p>
+            <p>For example, look at the individual with the following information (attributes and their values).
                 The trained Machine Learning can accurately <b>predict</b> whether this individual has an income
-                of <b>more than 50k</b> a year or less, based on what it learned from the data.
+                of <b>more than 50k</b> a year or <b>less</b>, based on what it learned from the data.
             </p>
+            <img src="{base}/adult_datapoint.png" alt="Adult Datapoint img" style="width: 25vw;">
         </Step>
         <Step>
             <h2 class="text-2xl">Experiment Structure</h2>
             <div class="container">
                 <div>
-                    <h3><b style="color: dodgerblue;">Introduction Phase:</b> Looking at the attributes of the person, <b>try
-                        to guess whether the individual earns more or lass than 50k a year by your intuition</b>.</h3>
+                    <h3><b style="color: dodgerblue;">Introduction Phase:</b></h3>
+                    <ol>
+                        <li>1. <b>Observe:</b> Look at the attributes of the person.</li>
+                        <li>2. <b>Make a Guess:</b> Use your <b>intuition</b> to decide whether the individual earns <b>more
+                            or less than 50k a year</b>.
+                        </li>
+                    </ol>
                     <img alt="Step1 gif" src={step1_gif_path} style="height: 50vh;"/>
                 </div>
             </div>
@@ -200,57 +206,73 @@
             <!-- Learning Phase -->
             <h2 class="text-2xl">Experiment Structure</h2>
             <div class="container">
-                <h3><b style="color: green;">Learning Phase:</b> Look at the attributes of the person and give a guess, whether this person earns more or less than 50k a year.</h3>
-                <p>Afterward, you can see the Machine Learning model's prediction and request explanations for the prediction.</p>
+                <h3><b style="color: green;">Learning Phase:</b></h3>
+                <ol>
+                    <li>1. <b>Make a Guess:</b> Look at the attributes of the person and decide whether they earn more
+                        or
+                        less than 50k a year.
+                    </li>
+                    <li>2. <b>View the Prediction:</b> Check the model's prediction and see its decision.</li>
+                    <li>3. <b>Request Explanations:</b> Explore why the model made this decision by requesting
+                        explanations.
+                    </li>
+                    <li>4. <b>Proceed:</b> Once you understand the model's reasoning, continue by clicking
+                        <b>Proceed</b>.
+                    </li>
+                </ol>
                 {#if study_group === 'interactive'}
-                    {@html study_group_interactive_text}
                     <img alt="Step2 gif" src={step2_gif_path_interactive} style="height: 50vh;"/>
                 {:else if study_group === 'chat'}
-                    {@html study_group_chat_text}
                     <img alt="Step2 gif" src={step2_gif_path_chat} style="height: 50vh;"/>
                 {:else}
-                    {@html study_group_static_text}
                     <img alt="Step2 gif" src={step2_gif_path_static} style="height: 50vh;"/>
                 {/if}
-                <p>When you feel that you understand the reason for the model's decision, continue by clicking <b>Proceed</b>.
-                </p>
             </div>
         </Step>
         <Step>
             <!-- Testing Phase -->
             <h2 class="text-2xl">Experiment Structure</h2>
             <div class="container">
-                <h3><b style="color: purple;">Testing Phase:</b> Guess the model prediction for a <b>similar
-                    individual</b> as seen before.</h3>
-                <p>For this <b>new individual, you will not receive the model's prediction or explanations</b>.</p>
+                <h3><b style="color: purple;">Testing Phase:</b></h3>
+                <ol>
+                    <li>1. <b>Predict:</b> Guess the model’s prediction for a <b>similar individual</b> as seen before.
+                    </li>
+                    <li>2. <b>No Feedback:</b> For this <b>new individual</b>, you will not receive the model’s
+                        prediction or explanations.
+                    </li>
+                    <li>3. <b>Repeat:</b> You will go through the <b>learning-testing</b> cycle a total of
+                        <b>{PUBLIC_TEACH_TEST_CYCLES}</b> times.
+                    </li>
+                </ol>
                 <img alt="Step3 gif" src={step3_gif_path} style="height: 50vh;"/>
-                <p>You will repeat the "learning - testing" cycle for a total of <b>{PUBLIC_TEACH_TEST_CYCLES}</b>
-                    times.</p>
             </div>
         </Step>
         <Step>
             <!-- Final Testing Phase -->
             <h2 class="text-2xl">Experiment Structure</h2>
             <div class="container">
-                <h3><b style="color: dodgerblue;">Final Testing Phase</b>: As in the earlier testing component of the
-                    learning-testing cycle,</h3>
-                <p><b>Predict the model's output for a new individual</b> without access to the model's prediction or
-                    explanations.</p>
+                <h3><b style="color: dodgerblue;">Final Testing Phase</b></h3>
+                <ol>
+                    <li><b>1. Predict:</b> Guess the model’s output for a <b>new individual</b> without seeing the
+                        model's prediction or explanations.
+                    </li>
+                    <li><b>2. Explain:</b> Tell us your reasons for the guess.</li>
+                    <li><b>3. Earn Points:</b> Correct answers will earn points.</li>
+                    <li><b>4. Bonus Payment:</b> Participants in the <b>top 10%</b> qualify for a bonus payment.
+                    </li>
+                </ol>
                 <img alt="Step4 gif" src={step4_gif_path} style="height: 50vh;"/>
-                <p>In this phase, correct answers give points and participants in the <b>top 10% qualify for a
-                    bonus payment</b>.</p>
             </div>
         </Step>
 
         <Step>
-            <h2 class="text-2xl">General Information</h2>
-            <p>
+            <h1 class="text-2xl">
                 <b>Attention:</b> Do not use the <b>browser's back button</b> during the experiment. This will cause the
                 <b>experiment to
                     restart</b>.
                 <br>
                 <br>
-            </p>
+            </h1>
         </Step>
         <Step>
             <h2 class="text-2xl">Your Information</h2>

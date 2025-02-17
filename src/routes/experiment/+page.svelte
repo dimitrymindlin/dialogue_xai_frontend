@@ -11,7 +11,9 @@
     import backend from '$lib/backend';
     import {fade} from 'svelte/transition';
     import type {PageData} from '../';
-    import {PUBLIC_TEACH_TEST_CYCLES, PUBLIC_END_TEST_CYCLES} from '$env/static/public';
+    import { env } from '$env/dynamic/public';
+    const PUBLIC_TEACH_TEST_CYCLES = env.PUBLIC_TEACH_TEST_CYCLES;
+    const PUBLIC_END_TEST_CYCLES = env.PUBLIC_END_TEST_CYCLES;
 
     import {goto} from '$app/navigation';
     import {base} from '$app/paths';
