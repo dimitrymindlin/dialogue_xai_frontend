@@ -258,7 +258,7 @@
 
         // Check if enough questions were asked and suggest some questions.
         // only if study_group is chat
-        if (study_group === 'chat' && experiment_phase === 'teaching' && !just_used_proceeding_stop) {
+        if (experiment_phase === 'teaching' && !just_used_proceeding_stop) {
             let result = await (await backend.xai(user_id).get_proceeding_okay()).json() as {
                 proceeding_okay: boolean,
                 message: TChatMessage,
