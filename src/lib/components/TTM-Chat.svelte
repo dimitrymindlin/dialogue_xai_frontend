@@ -40,7 +40,7 @@
 
     async function next(e: any) {
         e.preventDefault();
-        dispatch('next', null);
+        dispatch('next');
     }
 
     beforeUpdate(() => {

@@ -18,7 +18,6 @@
         let feature_name = featureOptions.find(f => f.id === Number(activeFeature))?.feature_name ?? '';
         // For feature questions, ensure a feature is selected
         if (type === 'feature' && !feature_name) {
-            console.log('Feature question requires a feature to be selected');
             return;
         }
 

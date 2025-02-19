@@ -1,7 +1,6 @@
 <script lang="ts">
     import {onMount, onDestroy} from 'svelte';
     import {typewriter} from '$lib/typewriter';
-    import LoadingCircle from '$lib/components/LoadingCircle.svelte';
 
     // Define the list of progress labels.
     const states = ['...'];
