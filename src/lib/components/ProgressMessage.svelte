@@ -4,7 +4,7 @@
     import LoadingCircle from '$lib/components/LoadingCircle.svelte';
 
     // Define the list of progress labels.
-    const states = ['Thinking...', 'Processing...'];
+    const states = ['...'];
 
     let currentStateIndex = 0;
     let currentState = states[currentStateIndex];
