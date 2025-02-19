@@ -31,7 +31,7 @@
     export const selfAssesmentPopupVisible = writable(false);
     export const introPopupVisible = writable(false);
 
-    export const questionRankingDone = writable(false);
+    export const questionRankingDone = writable(true);
 
     //-----------------------------------------------------------------
 
