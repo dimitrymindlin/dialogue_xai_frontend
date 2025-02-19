@@ -288,6 +288,7 @@
             }
         }
 
+        isLoading = true;
         handlingNext = true;
         just_used_proceeding_stop = false;
         transition_done = false;
