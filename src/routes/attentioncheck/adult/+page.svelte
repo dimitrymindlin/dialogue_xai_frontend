@@ -23,12 +23,13 @@
 
     let selected_statement = ""; // To store the user's selection
     const statements = [
-        "Assess whether the individual is a good employee",
-        "Guess, which machine learning model is used",
-        "Guess, whether the machine learning model would predict the individual to earn more or less than 50k a year",
-        "Describe how the individual can adap to earn more than 50k a year",
-        "Guess whether the individual is a good person",];
-    const correct_statement = "Guess, whether the machine learning model would predict the individual to earn more or less than 50k a year";
+        "Assess whether the individual is likely to succeed in their career",
+        "Guess whether the AI model would predict the individual to earn more or less than 50k a year",
+        "Identify key factors that influence an individual’s salary",
+        "Decide if the AI model’s prediction is fair",
+        "Predict the individual's actual salary based on their attributes"
+    ];
+    const correct_statement = "Guess whether the AI model would predict the individual to earn more or less than 50k a year";
     const attention_check_counter = "1";
     let attention_check_tries = 0;
 
@@ -61,18 +62,23 @@
 </script>
 
 <div class="modal">
-    <h2>This experiment has three parts as described before. In the learning part, you'll try to guess if a machine
-        learning model thinks
-        someone earns more or less than $50,000 a year. After guessing, you'll see the model's actual prediction and
-        get explanations to understand its reasoning. In the testing parts, you'll make similar guesses without seeing
-        the model's reasoning, using what you learned earlier. You'll go through several rounds of this process to
-        better grasp how the model makes predictions about different people's earnings.</h2>
+    <h2>This experiment is divided into three parts. First, in the learning phase, you’ll see a person’s profile and
+        guess whether the AI model predicts they earn more or less than $50,000 per year. After making your guess,
+        you’ll see the AI’s actual prediction along with explanations to help you understand its reasoning.
+
+        Next comes the testing phase, where you’ll make similar guesses—but this time, you won’t see the AI’s
+        explanation. Instead, you’ll rely on what you’ve learned so far.
+
+        Finally, in the final testing phase, you’ll go through multiple rounds to deepen your understanding of how the
+        AI makes decisions.
+    </h2>
     <br>
     {#if isLoading}
         <Spinner dark_background={false}/>
     {/if}
-    <p>Based on the task description you read above, when you see a profile of an individual, what will you be asked to
-        do?</p>
+    <p>Based on what you’ve read, what will you be asked to do when you see a persons profile? If you’re unsure, go back
+        and
+        review the instructions. You have two chances to answer correctly.</p>
     <p><i>Pleas re-read the instructions if you are not sure. You will have two opportunities to get this question
         correct.</i></p>
     <select bind:value={selected_statement} class="select">
