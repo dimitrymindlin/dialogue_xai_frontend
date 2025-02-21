@@ -279,13 +279,13 @@
                     <span>How much do you know about AI? Choose the option that best describes you:</span>
                     <select bind:value={fam_ml_val} class="select py-1">
                         <option value="" selected>- Select -</option>
-                        <option value="0">Very low: I have little to no understanding of AI.</option>
-                        <option value="1">Low: I have basic knowledge but limited understanding of AI concepts.
+                        <option value="very low">Very low: I have little to no understanding of AI.</option>
+                        <option value="low">Low: I have basic knowledge but limited understanding of AI concepts.
                         </option>
-                        <option value="2">Moderate: I have a fair understanding of AI concepts and its applications.
+                        <option value="moderate">Moderate: I have a fair understanding of AI concepts and its applications.
                         </option>
-                        <option value="3">High: I am knowledgeable about AI and how it is developed.</option>
-                        <option value="4">Very high: I am highly knowledgeable in AI and can train algorithms.</option>
+                        <option value="high">High: I am knowledgeable about AI and how it is developed.</option>
+                        <option value="very high">Very high: I am highly knowledgeable in AI and can train algorithms.</option>
                         <option value="anonymous">Prefer not to say</option>
                     </select>
                 </label>
