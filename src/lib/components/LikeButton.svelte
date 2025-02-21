@@ -24,5 +24,5 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-<img class="mr-2.5 mt-2 clickable" src={like} alt="" width="20" height="20" on:click={handleLike}/>
+<img class="mr-2.5 mt-2 clickable" src={like} alt="" width="18" height="15" on:click={handleLike}/>
 <Modal type={"positive"} showModal={showModal} bind:userInput={userInput} on:close={handleModalClose}/>

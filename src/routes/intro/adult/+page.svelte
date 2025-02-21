@@ -258,7 +258,9 @@
 
         <Step>
             <h1 class="text-2xl">
-                ⚠️ Important: Avoid using the back button—it will restart the experiment!
+                ⚠️ <b>Browser Back Button</b>: Avoid using the back button—it will restart the experiment! <br>
+                ⚠️ <b>No Personal Information in Chat</b>: When using the chatbot, your messages will be sent to OpenAI and your
+                personal information is not required and should not be sent. <br>
                 <br>
                 <br>
             </h1>

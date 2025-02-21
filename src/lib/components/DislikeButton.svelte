@@ -21,5 +21,5 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-<img class="mr-2.5 mt-2 rotate-180 clickable" src={like} alt="" width="20" height="20" on:click={handleDislike}/>
+<img class="mr-2.5 mt-2 rotate-180 clickable" src={like} alt="" width="18" height="15" on:click={handleDislike}/>
 <Modal type={"negative"} showModal={showModal} bind:userInput={userInput} on:close={handleModalClose}/>

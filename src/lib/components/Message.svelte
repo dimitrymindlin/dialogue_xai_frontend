@@ -18,12 +18,14 @@
 
     // Function to handle button click for questions
     function buttonOnClick(questionId: string, feature: string, question: string) {
-        dispatch('questionClick', { questionId, feature, question});
+        dispatch('questionClick', {questionId, feature, question});
     }
 
     // Function to toggle message size
     function toggleMessageSize() {
-        isClicked = true; // Open the modal
+        if (!message.isUser) {
+            isClicked = true;
+        }
     }
 
     // Function to close the modal
@@ -38,10 +40,11 @@
         {@html message.text}
         {#if !message.isUser && message.feedback}
             <br/>
-            <span class="float-right flex flex-wrap" in:fade={{ delay: 1000, duration: 250 }}>
-                <LikeButton {message} on:feedbackButtonClick={forwardEvent} />
-                <DislikeButton {message} on:feedbackButtonClick={forwardEvent} />
-            </span>
+            <span class="float-right flex flex-wrap" on:click|stopPropagation in:fade={{ delay: 1000, duration: 250 }}>
+            <span class="text-sm text-gray-600 mt-2 mr-1">Liking the response?</span>
+            <LikeButton {message} on:feedbackButtonClick={forwardEvent}/>
+            <DislikeButton {message} on:feedbackButtonClick={forwardEvent}/>
+          </span>
         {/if}
         <br/>
         {#if message.followup && message.followup.length > 0}
@@ -72,8 +75,8 @@
                 {#if !message.isUser && message.feedback}
                     <br/>
                     <span class="float-right flex flex-wrap" in:fade={{ delay: 500, duration: 250 }}>
-                        <LikeButton {message} on:feedbackButtonClick={forwardEvent} />
-                        <DislikeButton {message} on:feedbackButtonClick={forwardEvent} />
+                        <LikeButton {message} on:feedbackButtonClick={forwardEvent}/>
+                        <DislikeButton {message} on:feedbackButtonClick={forwardEvent}/>
                     </span>
                 {/if}
                 <br/>
@@ -82,11 +85,11 @@
                         <p><b>Question Suggestions</b></p>
                         {#each message.followup as question}
                             <button
-                                data-value={question.id}
-                                type="button"
-                                class="btn variant-ghost-primary"
-                                style="font-size: 0.75rem;"
-                                on:click={() => buttonOnClick(question.id, question.feature)}
+                                    data-value={question.id}
+                                    type="button"
+                                    class="btn variant-ghost-primary"
+                                    style="font-size: 0.75rem;"
+                                    on:click={() => buttonOnClick(question.id, question.feature)}
                             >
                                 {question.question}
                             </button>
