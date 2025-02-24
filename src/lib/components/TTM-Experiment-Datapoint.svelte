@@ -7,7 +7,7 @@
     import FeedbackWindow from "$lib/components/FeedbackWindow.svelte";
     import {createEventDispatcher} from "svelte";
     import '$lib/../global.css';
-    import { env } from '$env/dynamic/public';
+    import {env} from '$env/dynamic/public';
 
     const dispatch = createEventDispatcher();
     const PUBLIC_TEACH_TEST_CYCLES = env.PUBLIC_TEACH_TEST_CYCLES;
@@ -98,55 +98,45 @@
         logPrediction(event);
     }
 
-    async function logPrediction(event?) {
+    async function logPrediction(event?: any) {
         const isFinalTest = experimentPhase === 'final-test';
         const isIntroTest = experimentPhase === 'intro-test';
 
-        // If intro and confidence level not set, return
-        if (isIntroTest && confidence_level === "-1") {
+        // For intro-test and final-test, do not log if confidence_level is not set
+        if ((isIntroTest || isFinalTest) && confidence_level === "-1") {
             return;
         }
 
-        if (isFinalTest && confidence_level === "-1") {
-            return;
-        }
-
-        if ((isFinalTest) && event) {
+        // In final-test, extract feedback if provided and ensure it is non-empty
+        if (isFinalTest && event) {
             feedback = event?.detail?.feedback || '';
-            if (feedback === '') {
-                return; // Don't log if feedback is empty in final test
-            }
+            if (!feedback) return;
         }
 
-        // Check if user_id and selected_prediction are not null and log
+        // Dispatch a user_predicted event if prediction is available
         if (user_id !== null && selected_prediction !== null) {
             dispatch('user_predicted', {user_prediction: selected_prediction});
         }
 
-        // Dispatch clicked selection event to show loading spinner if not teaching
+        // Show spinner by dispatching 'clicked' if not in teaching phase
         if (experimentPhase !== 'teaching') {
             dispatch('clicked');
         }
 
-        // Extract feedback and confidence level if applicable
-        let confidenceLevelToSend = confidence_level;
-
-        // Prepare common details object with optional properties based on the phase
+        // Build details object with safe spreading
         const details = {
             datapoint_count: datapoint_count,
             prediction: selected_prediction,
             true_label: instance_prediction,
-            ...(isIntroTest || isFinalTest) && {confidence_level: confidenceLevelToSend},
-            ...(isFinalTest && {feedback: feedback})
+            ...(isIntroTest || isFinalTest ? {confidence_level: confidence_level} : {}),
+            ...(isFinalTest ? {feedback: feedback} : {})
         };
 
-        // Log event if not final test
-        if (!isFinalTest) {
+        // Log the event with a single call based on the phase
+        try {
             await fetch(`${base}/api/log_event`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     user_id: user_id,
                     event_source: experimentPhase,
@@ -154,34 +144,22 @@
                     details: details,
                 })
             });
+        } catch (error) {
+            console.error("Error logging prediction:", error);
         }
 
-        // Reset confidence level and dispatch next event if not in teaching.
-        if (experimentPhase !== 'teaching' && experimentPhase !== "final-test") {
+        // Reset confidence_level if not in teaching or final-test phase
+        if (experimentPhase !== 'teaching' && !isFinalTest) {
             confidence_level = "-1";
         }
 
-        if (experimentPhase === "test") {
+        // In test phase or in final test (after successful logging) dispatch next event
+        if (experimentPhase === "test" || isFinalTest) {
+            // In final test, reset confidence_level after logging
+            if (isFinalTest) {
+                confidence_level = "-1";
+            }
             dispatch('next');
-        }
-
-        if (isFinalTest && confidence_level !== "-1") {
-            // Dispatch next event if confidence level is set
-            await fetch(`${base}/api/log_event`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    user_id: user_id,
-                    event_source: experimentPhase,
-                    event_type: 'user_prediction',
-                    details: details,
-                })
-            });
-            confidence_level = "-1";
-            dispatch('next');
-            return;
         }
     }
 </script>
