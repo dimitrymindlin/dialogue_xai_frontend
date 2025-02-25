@@ -1,10 +1,9 @@
 <script lang="ts">
     import {onMount, onDestroy} from 'svelte';
     import {typewriter} from '$lib/typewriter';
-    import LoadingCircle from '$lib/components/LoadingCircle.svelte';
 
     // Define the list of progress labels.
-    const states = ['Thinking...', 'Processing...'];
+    const states = ['...'];
 
     let currentStateIndex = 0;
     let currentState = states[currentStateIndex];
@@ -58,7 +57,7 @@
 
 <!-- Use the same bubble structure and styling as your non-user messages -->
 <div class="flex items-end mb-2.5 left-msg">
-    <div class="msg-bubble max-w-md p-2.5 rounded-2xl bg-surface-700">
+    <div class="msg-bubble max-w-md p-2.5 rounded-2xl">
         <div class="loading-container">
             <div class="planet">
                 <div class="ring"></div>
@@ -72,11 +71,20 @@
 </div>
 
 <style lang="postcss">
+    /* Disable Tailwind ring properties globally */
+    :global(*) {
+        --tw-ring-inset: 0 !important;
+        --tw-ring-offset-width: 0px !important;
+        --tw-ring-offset-color: #fff !important;
+        --tw-ring-color: transparent !important;
+        --tw-ring-offset-shadow: 0 0 #0000 !important;
+        --tw-ring-shadow: 0 0 #0000 !important;
+    }
+
     .left-msg .msg-bubble {
-        @apply rounded-bl-none;
-        background: rgba(30, 41, 59, 0.8);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        @apply rounded-bl-none variant-ghost-surface;
+        background: #dbdee9;
+        border: 1px solid #c0c4d0;
     }
 
     .loading-container {
@@ -118,7 +126,7 @@
         box-shadow: 
             inset -4px -4px 8px rgba(0, 0, 0, 0.5),
             inset 4px 4px 8px rgba(255, 255, 255, 0.3),
-            0 0 5px rgba(30, 144, 255, 0.2);
+            0 0 5px rgba(0, 0, 0, 0.2);
         animation: 
             rotate 6s linear infinite,
             moveGradient 3s ease infinite;
@@ -142,26 +150,14 @@
         width: 100%;
         height: 100%;
         border: 1.5px solid transparent;
-        border-top: 1.5px solid #1e90ff;
-        border-right: 1.5px solid #1e90ff;
+        border-top: 1.5px solid #333;
+        border-right: 1.5px solid #333;
         border-radius: 50%;
-        animation: spin 3s linear infinite;
-    }
-
-    .ring::after {
-        content: '';
-        position: absolute;
-        top: -2px;
-        left: -2px;
-        width: calc(100% + 4px);
-        height: calc(100% + 4px);
-        border: 1.5px solid rgba(30, 144, 255, 0.2);
-        border-radius: 50%;
-        box-shadow: 0 0 10px rgba(30, 144, 255, 0.2);
+        animation: spin-reverse 3s linear infinite;
     }
 
     .loading-text {
-        color: #1e90ff;
+        color: #333;
         font-size: 14px;
         font-weight: 500;
         opacity: 1;
@@ -175,6 +171,15 @@
         }
         to {
             transform: rotate(360deg);
+        }
+    }
+
+    @keyframes spin-reverse {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(-360deg);
         }
     }
 
