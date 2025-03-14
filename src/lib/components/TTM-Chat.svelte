@@ -6,6 +6,7 @@
     import ProgressMessage from './ProgressMessage.svelte'; // Import our new component
     import {createEventDispatcher} from 'svelte';
     import SubmitButton from "$lib/components/SubmitButton.svelte";
+    import SoundWaveOverlay from "./SoundWaveOverlay.svelte"; // Import the new overlay component
 
     export let messages: TChatMessage[] = [];
     let element: HTMLElement;
@@ -18,6 +19,7 @@
     let audioChunks: Blob[] = [];
     let isProcessingSpeech = false;
     let hasText = false; // New variable to track if there's text in the input
+    let showSoundWaveOverlay = false; // New variable to control overlay visibility
 
     let autoscroll = false;
 
@@ -59,6 +61,24 @@
         } else {
             startRecording();
         }
+    }
+
+    // Function for the sound wave button
+    function handleSoundWaveClick() {
+        console.log('Sound wave button clicked');
+        showSoundWaveOverlay = true; // Show the overlay when button is clicked
+    }
+
+    // Function to close the overlay
+    function handleCloseOverlay() {
+        showSoundWaveOverlay = false;
+    }
+
+    // Function to save sound settings
+    function handleSaveSettings() {
+        console.log('Saving sound settings');
+        // Here you would implement the logic to save the settings
+        showSoundWaveOverlay = false;
     }
 
     async function startRecording() {
@@ -203,21 +223,51 @@
                     <i class="fas fa-paper-plane"></i>
                 </button>
             {:else}
-                <button 
-                    type="button"
-                    class="microphone-button {isRecording ? 'recording' : ''} {isProcessingSpeech ? 'processing' : ''}"
-                    on:click={toggleRecording}
-                    disabled={isProcessingSpeech}
-                    title={isRecording ? "Stop recording" : "Start recording"}
-                >
-                    {#if isRecording}
-                        <i class="fas fa-stop"></i>
-                    {:else if isProcessingSpeech}
-                        <div class="loading-circle"></div>
-                    {:else}
-                        <i class="fas fa-microphone"></i>
-                    {/if}
-                </button>
+                <!-- Voice recognition section with microphone and voice wave -->
+                <div class="voice-recognition-section">
+                    <button 
+                        type="button"
+                        class="microphone-button {isRecording ? 'recording' : ''} {isProcessingSpeech ? 'processing' : ''}"
+                        on:click={toggleRecording}
+                        disabled={isProcessingSpeech}
+                        title={isRecording ? "Stop recording" : "Start recording"}
+                    >
+                        {#if isRecording}
+                            <i class="fas fa-stop"></i>
+                        {:else if isProcessingSpeech}
+                            <div class="loading-circle"></div>
+                        {:else}
+                            <i class="fas fa-microphone"></i>
+                        {/if}
+                    </button>
+                    
+                    <!-- Voice wave visualization -->
+                    <div class="voice-wave-container {isRecording ? 'active' : ''}">
+                        {#if isRecording}
+                            <div class="voice-wave">
+                                <span class="wave-bar"></span>
+                                <span class="wave-bar"></span>
+                                <span class="wave-bar"></span>
+                                <span class="wave-bar"></span>
+                                <span class="wave-bar"></span>
+                            </div>
+                        {:else}
+                            <button 
+                                type="button"
+                                class="sound-wave-button"
+                                on:click={handleSoundWaveClick}
+                                title="Sound options"
+                            >
+                                <div class="sound-wave-icon">
+                                    <span class="sound-wave-line"></span>
+                                    <span class="sound-wave-line"></span>
+                                    <span class="sound-wave-line"></span>
+                                    <span class="sound-wave-line"></span>
+                                </div>
+                            </button>
+                        {/if}
+                    </div>
+                </div>
             {/if}
             
             {#if study_group === 'chat'}
@@ -225,6 +275,14 @@
                 <SubmitButton next={next} label="Proceed"/>
             {/if}
         </div>
+    {/if}
+
+    <!-- Sound Wave Overlay -->
+    {#if showSoundWaveOverlay}
+        <SoundWaveOverlay 
+            on:close={handleCloseOverlay}
+            on:save={handleSaveSettings}
+        />
     {/if}
 </div>
 
@@ -253,6 +311,18 @@
         margin-right: 10px;
     }
 
+    /* Voice recognition section styling */
+    .voice-recognition-section {
+        display: flex;
+        align-items: center;
+        background-color: #f8f8f8;
+        border-radius: 24px;
+        padding: 5px 10px;
+        margin: 0 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        border: 1px solid #e0e0e0;
+    }
+
     .microphone-button, .send-button {
         width: 40px;
         height: 40px;
@@ -263,9 +333,91 @@
         align-items: center;
         justify-content: center;
         padding: 0 !important;
-        margin: 0 10px;
+        margin: 0;
         transition: all 0.2s ease;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* Voice wave container styling */
+    .voice-wave-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        margin-left: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .sound-wave-button {
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        transition: transform 0.2s ease;
+    }
+
+    .sound-wave-button:hover {
+        transform: scale(1.1);
+    }
+
+    .sound-wave-button:active {
+        transform: scale(0.95);
+    }
+
+    .sound-wave-icon {
+        display: flex;
+        align-items: center;
+        height: 20px;
+        gap: 3px;
+    }
+
+    .sound-wave-line {
+        display: inline-block;
+        width: 2px;
+        background-color: #555;
+        border-radius: 1px;
+    }
+
+    .sound-wave-line:nth-child(1) { height: 6px; }
+    .sound-wave-line:nth-child(2) { height: 10px; }
+    .sound-wave-line:nth-child(3) { height: 10px; }
+    .sound-wave-line:nth-child(4) { height: 6px; }
+
+    .voice-wave-container i {
+        color: #555;
+        font-size: 18px;
+    }
+
+    .voice-wave {
+        display: flex;
+        align-items: center;
+        height: 20px;
+        gap: 2px;
+    }
+
+    .wave-bar {
+        display: inline-block;
+        width: 3px;
+        background-color: #1976d2;
+        border-radius: 1px;
+        animation: sound 0.5s 0s infinite alternate;
+    }
+
+    .wave-bar:nth-child(1) { height: 10px; animation-duration: 0.2s; }
+    .wave-bar:nth-child(2) { height: 16px; animation-duration: 0.15s; }
+    .wave-bar:nth-child(3) { height: 20px; animation-duration: 0.2s; }
+    .wave-bar:nth-child(4) { height: 14px; animation-duration: 0.25s; }
+    .wave-bar:nth-child(5) { height: 8px; animation-duration: 0.3s; }
+
+    @keyframes sound {
+        0% { height: 3px; }
+        100% { height: 100%; }
     }
     
     .microphone-button:hover, .send-button:hover {
