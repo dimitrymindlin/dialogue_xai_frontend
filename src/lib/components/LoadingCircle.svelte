@@ -1,6 +1,6 @@
 <script>
   export let size = "24px";
-  export let color = "#666";
+  export let color = "#333";
 </script>
 
 <div class="loading-circle" style="--size: {size}; --color: {color}">
