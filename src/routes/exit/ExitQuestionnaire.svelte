@@ -20,31 +20,31 @@
     }
 
     let interactive_group_questions = [
-        'The chatbot is cooperative.',
-        'I like the chatbot.',
-        "While explaining, the chatbot met me halfway.",
-        'The chatbot has no clue of what it is doing.',
-        "The chatbot intended to provide me with the opportunity to build an understanding of the topic by asking questions.",
-        "The chatbot encouraged me to continuously think about further details of the topic.",
-        'The chatbot always gives good advice.',
-        'The chatbot can collaborate in a productive way.',
-        "The chatbot considered my understanding.",
-        'The chatbot acts truthfully.',
-        'The chatbots appears confused.',
-        "While explaining, it was important for the chatbot to monitor whether I understood everything.",
-        "The chatbot responded when I signaled non-understanding.",
-        'The chatbot interacts socially with me.',
-        "The chatbot took my statements into account.",
-        'The chatbot acts intentionally',
-        'I can see myself using the chatbot in the future.',
+        'The chatbot is cooperative.', // AL4
+        'I like the chatbot.', // AL2
+        "While explaining, the chatbot met me halfway.", // coco3
+        'The chatbot has no clue of what it is doing.', // AI3
+        "The chatbot intended to provide me with the opportunity to build an understanding of the topic by asking questions.", // scaf1
+        "The chatbot encouraged me to continuously think about further details of the topic.", // scaf2
+        'The chatbot always gives good advice.', // UT1
+        'The chatbot can collaborate in a productive way.', // UAL4
+        "The chatbot considered my understanding.", // coco2
+        'The chatbot acts truthfully.', // UT2
+        'The chatbots appears confused.', // AC4
+        "While explaining, it was important for the chatbot to monitor whether I understood everything.", // moni2
+        "The chatbot responded when I signaled non-understanding.", // moni3
+        'The chatbot interacts socially with me.', // AS3
+        "The chatbot took my statements into account.", // coco4
+        'The chatbot acts intentionally', // AI1
+        'I can see myself using the chatbot in the future.', // UAA2
         'When finishing to read this sentence, select Strongly Disagree to prove that you pay attention.',
-        "When learning about a new topic, it’s better to think about details yourself, rather than having everything fully explained.",
-        "While explaining, it was important for the chatbot to continuously consider whether I understood the explanation.",
-        "The chatbot encouraged me to visualize the different processes of the topic.",
-        'I can rely on the chatbot.',
-        'The chatbot is easy to use.',
-        "The explanation was meant to encourage me to question my understanding.",
-        "The chatbot carefully adapted its utterances to my responses."
+        "When learning about a new topic, it’s better to think about details yourself, rather than having everything fully explained.", // scaf3
+        "While explaining, it was important for the chatbot to continuously consider whether I understood the explanation.", // moni1
+        "The chatbot encouraged me to visualize the different processes of the topic.", // scaf4
+        'I can rely on the chatbot.', // UT3
+        'The chatbot is easy to use.', // AU1
+        "The explanation was meant to encourage me to question my understanding.", // coco5
+        "The chatbot carefully adapted its utterances to my responses." // coco1
     ];
 
     let static_group_questions = [
