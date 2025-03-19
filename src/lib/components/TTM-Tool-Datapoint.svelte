@@ -69,7 +69,7 @@
     {#if activeTab === 'map'}
         <div class="map-container">
             <iframe
-                    src="{base}/map_D.html"
+                    src="{base}/map_EN.html"
                     width="100%"
                     height="100%"
                     allowfullscreen
