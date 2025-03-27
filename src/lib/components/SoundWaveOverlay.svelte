@@ -8,6 +8,9 @@
     // API URL for backend communication
     const API_URL = 'http://localhost:4555';
     
+    // Global flag to check if overlay is closed
+    let isOverlayClosed = false;
+    
     // Props to receive user_id from parent component
     export let user_id = ''
     
@@ -17,14 +20,6 @@
     // Error handling
     let recognitionErrorMessage = '';
     
-    // Function to close the overlay when clicking outside the content area
-    function handleBackdropClick(event: MouseEvent) {
-        // Only close if the click was directly on the backdrop, not on its children
-        if (event.target === event.currentTarget) {
-            dispatch('close');
-        }
-    }
-
     // Audio visualization variables
     let audioContext: AudioContext | null = null;
     let analyser: AnalyserNode | null = null;
@@ -86,6 +81,114 @@
     let responseText = '';
     let apiError = '';
     let isProcessing = false; // New variable to track API processing state
+    
+    // Function to close the overlay when clicking outside the content area
+    function handleBackdropClick(event: MouseEvent) {
+        // Only close if the click was directly on the backdrop, not on its children
+        if (event.target === event.currentTarget) {
+            cleanupAndClose();
+        }
+    }
+
+    // Function to handle cleanup and close the overlay
+    function cleanupAndClose() {
+        console.log('Cleaning up and closing overlay');
+        
+        // Set overlay closed flag to prevent further processing
+        isOverlayClosed = true;
+        
+        // Reset state variables immediately
+        isResponding = false;
+        isProcessing = false;
+        isRecognizing = false;
+        isListening = false;
+        recognitionPaused = false;
+        transcript = '';
+        responseText = '';
+        
+        // Force stop any speech synthesis immediately
+        if (speechSynthesis) {
+            try {
+                speechSynthesis.cancel();
+                console.log('Speech synthesis canceled');
+            } catch (error) {
+                console.error('Error canceling speech synthesis:', error);
+            }
+        }
+        
+        // Force stop any current audio playback
+        if (audioPlayer) {
+            try {
+                audioPlayer.pause();
+                audioPlayer.currentTime = 0;
+                if (audioPlayer.src) {
+                    URL.revokeObjectURL(audioPlayer.src);
+                    audioPlayer.src = '';
+                }
+                console.log('Audio playback stopped');
+            } catch (error) {
+                console.error('Error stopping audio playback:', error);
+            }
+        }
+        
+        // Force stop animation frame
+        if (animationFrameId) {
+            try {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = 0;
+                console.log('Animation frame canceled');
+            } catch (error) {
+                console.error('Error canceling animation frame:', error);
+            }
+        }
+        
+        // Force disconnect microphone
+        if (microphone && audioContext) {
+            try {
+                microphone.disconnect();
+                microphone = null;
+                console.log('Microphone disconnected');
+            } catch (error) {
+                console.error('Error disconnecting microphone:', error);
+            }
+        }
+        
+        // Force close audio context
+        if (audioContext) {
+            try {
+                if (audioContext.state !== 'closed') {
+                    audioContext.close();
+                }
+                audioContext = null;
+                console.log('Audio context closed');
+            } catch (error) {
+                console.error('Error closing audio context:', error);
+            }
+        }
+        
+        // Force stop speech recognition
+        if (recognition) {
+            try {
+                recognition.onend = (() => {}) as (event: Event) => void;
+                recognition.stop();
+                recognition = null;
+                console.log('Speech recognition stopped');
+            } catch (error) {
+                console.error('Error stopping speech recognition:', error);
+            }
+        }
+        
+        // Clear any timers
+        if (silenceTimer) {
+            clearTimeout(silenceTimer);
+            silenceTimer = null;
+            console.log('Silence timer cleared');
+        }
+        
+        // Dispatch close event to parent
+        dispatch('close');
+        console.log('Overlay closed');
+    }
     
     // Helper function to clean HTML tags and extract first paragraph for speech
     function cleanTextForSpeech(text: string): string {
@@ -256,6 +359,12 @@
     
     // Function to resume recognition
     function resumeRecognition() {
+        // If overlay is closed, don't resume anything
+        if (isOverlayClosed) {
+            console.log('Overlay closed, not resuming recognition');
+            return;
+        }
+
         recognitionPaused = false;
         if (recognition && isListening && !isRecognizing) {
             try {
@@ -294,6 +403,12 @@
     
     // Send transcript to API
     async function sendTranscriptToAPI(text: string) {
+        // If overlay is closed, don't process anything
+        if (isOverlayClosed) {
+            console.log('Overlay closed, ignoring API call');
+            return;
+        }
+        
         // Prevent multiple simultaneous API calls
         if (isProcessingTranscript) {
             console.log('Already processing a transcript, ignoring:', text);
@@ -420,6 +535,12 @@
     
     // Play audio data from API response
     async function playAudioFromResponse(audioData: string) {
+        // If overlay is closed, don't play anything
+        if (isOverlayClosed) {
+            console.log('Overlay closed, ignoring audio playback');
+            return;
+        }
+
         try {
             console.log('Playing audio from API response');
             
@@ -439,6 +560,12 @@
                 
                 // Set up event handlers
                 audioPlayer.onplay = () => {
+                    // If overlay is closed, stop playback immediately
+                    if (isOverlayClosed) {
+                        audioPlayer.pause();
+                        return;
+                    }
+                    
                     console.log('Audio playback started');
                     isResponding = true;
                     
@@ -447,10 +574,13 @@
                 };
                 
                 audioPlayer.onended = () => {
+                    // If overlay is closed, don't process anything
+                    if (isOverlayClosed) {
+                        return;
+                    }
+                    
                     console.log('Audio playback ended');
                     isResponding = false;
-                    // Don't clear response text immediately when done speaking
-                    // responseText = ''; // Clear response text when done speaking
                     
                     // Revoke the object URL to free up memory
                     URL.revokeObjectURL(audioPlayer.src);
@@ -460,12 +590,18 @@
                     
                     // Resume recognition after speaking is done
                     setTimeout(() => {
-                        resumeRecognition();
+                        // Check if overlay is still open before resuming
+                        if (!isOverlayClosed) {
+                            resumeRecognition();
+                        }
                     }, 500); // Small delay before resuming recognition
                     
                     // Clear response text after a delay to ensure it's visible
                     setTimeout(() => {
-                        responseText = '';
+                        // Check if overlay is still open before clearing
+                        if (!isOverlayClosed) {
+                            responseText = '';
+                        }
                     }, 3000); // Keep text visible for 3 seconds after speaking ends
                 };
                 
@@ -644,6 +780,12 @@
     
     // Fallback to browser's speech synthesis
     function speakResponseWithBrowser(text: string) {
+        // If overlay is closed, don't speak anything
+        if (isOverlayClosed) {
+            console.log('Overlay closed, ignoring speech synthesis');
+            return;
+        }
+
         try {
             if (!speechSynthesis) {
                 console.error('Speech synthesis not supported in this browser');
@@ -690,6 +832,12 @@
             
             // Set event handlers
             utterance.onstart = () => {
+                // If overlay is closed, cancel speech immediately
+                if (isOverlayClosed) {
+                    speechSynthesis.cancel();
+                    return;
+                }
+                
                 isResponding = true;
                 console.log('Speech synthesis started');
                 
@@ -698,9 +846,12 @@
             };
             
             utterance.onend = () => {
+                // If overlay is closed, don't process anything
+                if (isOverlayClosed) {
+                    return;
+                }
+                
                 isResponding = false;
-                // Don't clear response text immediately when done speaking
-                // responseText = ''; // Clear response text when done speaking
                 console.log('Speech synthesis ended');
                 
                 // Stop audio visualization for the response
@@ -708,12 +859,18 @@
                 
                 // Resume recognition after speaking is done
                 setTimeout(() => {
-                    resumeRecognition();
+                    // Check if overlay is still open before resuming
+                    if (!isOverlayClosed) {
+                        resumeRecognition();
+                    }
                 }, 500); // Small delay before resuming recognition
                 
                 // Clear response text after a delay to ensure it's visible
                 setTimeout(() => {
-                    responseText = '';
+                    // Check if overlay is still open before clearing
+                    if (!isOverlayClosed) {
+                        responseText = '';
+                    }
                 }, 3000); // Keep text visible for 3 seconds after speaking ends
             };
             
@@ -968,6 +1125,9 @@
     }
     
     onMount(() => {
+        // Reset overlay closed flag
+        isOverlayClosed = false;
+        
         // Initialize speech recognition
         initSpeechRecognition();
         
@@ -1004,7 +1164,7 @@
 
 <div class="overlay-backdrop" on:click={handleBackdropClick}>
     <div class="voice-visualization-container">
-        <button class="close-button" on:click={() => dispatch('close')}>
+        <button class="close-button" on:click={cleanupAndClose}>
             <i class="fas fa-times"></i>
         </button>
         
