@@ -1,7 +1,14 @@
 import postgres from 'postgres';
 import type {JSONValue} from 'postgres';
-import {POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_HOST} from "$env/static/private"
-import {PUBLIC_A_B_SELECTION} from '$env/static/public';
+
+import dotenv from 'dotenv';
+dotenv.config();
+
+const POSTGRES_USER = process.env.POSTGRES_USER;
+const POSTGRES_PASSWORD = process.env.POSTGRES_PASSWORD;
+const POSTGRES_DB = process.env.POSTGRES_DB;
+const POSTGRES_HOST = process.env.POSTGRES_HOST;
+const PUBLIC_A_B_SELECTION = process.env.PUBLIC_A_B_SELECTION;
 
 const sql = postgres({
     host: POSTGRES_HOST,

@@ -18,7 +18,6 @@
         let feature_name = featureOptions.find(f => f.id === Number(activeFeature))?.feature_name ?? '';
         // For feature questions, ensure a feature is selected
         if (type === 'feature' && !feature_name) {
-            console.log('Feature question requires a feature to be selected');
             return;
         }
 
@@ -76,7 +75,7 @@
 <style lang="postcss">
     /* Style the buttons to adapt to container width */
     button {
-        @apply rounded-lg w-full whitespace-normal my-[5px] px-2 py-3.5 text-sm;
+        @apply rounded-lg w-full whitespace-normal my-1.5 px-3 py-2 text-sm;
         max-width: 100%; /* Ensure it doesn't overflow its container */
     }
 

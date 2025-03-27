@@ -33,7 +33,7 @@ export const load = (async ({url}) => {
         id,
         prediction_probability,
         ...datapoint
-    } = await (await backend.xai(user_id).get_train_datapoint()).json() as TDatapointResult;
+    } = await (await backend.xai(user_id).get_train_datapoint(1)).json() as TDatapointResult;
 
     return {
         user_id,

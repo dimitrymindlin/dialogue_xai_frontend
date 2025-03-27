@@ -1,4 +1,6 @@
-import {PUBLIC_BACKEND_URL} from "$env/static/public";
+import { env } from '$env/dynamic/public';
+
+const PUBLIC_BACKEND_URL = env.PUBLIC_BACKEND_URL;
 
 export default {
     xai: (user_id: string, study_group = 'A', user_ml_knowledge = "low") => ({

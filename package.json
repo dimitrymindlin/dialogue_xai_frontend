@@ -45,6 +45,7 @@
   "dependencies": {
     "@types/dom-view-transitions": "1.0.3",
     "caniuse-lite": "",
+    "dotenv": "^16.4.7",
     "postgres": "^3.4.3",
     "random-word-slugs": "^0.1.7",
     "uuid": "^9.0.1"

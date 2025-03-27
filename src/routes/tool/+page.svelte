@@ -38,8 +38,13 @@
     /**
      * Chat relevant
      */
-    let messages: TChatMessage[] = [data.datapoint.initial_message];
-    let initial_message: TChatMessage;
+    let messages: TChatMessage[] = [];
+    let initial_message = {
+        text: "The model predicts that the current datapoint is " + current_prediction + ". You can ask questions.",
+        isUser: false,
+        feedback: false,
+        question_id: "init"
+    }
 
     let feature_names = data.feature_names;
     let {feature_questions, general_questions}: TQuestionResult = data.questions;
@@ -207,8 +212,7 @@
 
     async function handleNext(e: any) {
         // Get the next datapoint
-        let result = await (await backend.xai(user_id).get_train_datapoint()).json() as TDatapointResult;
-        initial_message = result.initial_message;
+        let result = await (await backend.xai(user_id).get_train_datapoint(datapoint_count)).json() as TDatapointResult;
         current_datapoint = result;
         //-----------------------------------------------------------------
         datapoint_answer_selected = null;

@@ -11,7 +11,10 @@
     import backend from '$lib/backend';
     import {fade} from 'svelte/transition';
     import type {PageData} from '../';
-    import {PUBLIC_TEACH_TEST_CYCLES, PUBLIC_END_TEST_CYCLES} from '$env/static/public';
+    import {env} from '$env/dynamic/public';
+
+    const PUBLIC_TEACH_TEST_CYCLES = env.PUBLIC_TEACH_TEST_CYCLES;
+    const PUBLIC_END_TEST_CYCLES = env.PUBLIC_END_TEST_CYCLES;
 
     import {goto} from '$app/navigation';
     import {base} from '$app/paths';
@@ -29,7 +32,7 @@
     export const selfAssesmentPopupVisible = writable(false);
     export const introPopupVisible = writable(false);
 
-    export const questionRankingDone = writable(false);
+    export const questionRankingDone = writable(true);
 
     //-----------------------------------------------------------------
 
@@ -249,93 +252,80 @@
     }
 
     async function handleNext(e: any) {
-        console.log("Handling Next", experiment_phase, datapoint_count);
-        // Check if clicked twice
-        if (handlingNext) {
-            return;
-        }
+        if (handlingNext) return; // Prevent duplicate clicks
 
-        // Check if enough questions were asked and suggest some questions.
-        // only if study_group is chat
-        if (study_group === 'chat' && experiment_phase === 'teaching' && !just_used_proceeding_stop) {
-            let result = await (await backend.xai(user_id).get_proceeding_okay()).json() as {
-                proceeding_okay: boolean,
-                message: TChatMessage,
-            };
+        // Check proceeding requirement if in 'teaching'
+        if (experiment_phase === 'teaching' && !just_used_proceeding_stop) {
+            const res = await backend.xai(user_id).get_proceeding_okay();
+            const result = await res.json() as { proceeding_okay: boolean, message: TChatMessage };
             if (!result.proceeding_okay) {
-                // Send message to user stating that they need to ask more questions and include follow-up questions
                 pushMessage(result.message);
                 just_used_proceeding_stop = true;
-                // log event
-                const details = {
-                    datapoint_count: datapoint_count,
-                    message: result.message,
-                };
+                // Log proceeding stop event
                 fetch(`${base}/api/log_event`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        user_id: user_id,
+                        user_id,
                         event_source: 'teaching',
                         event_type: 'proceeding_stop',
-                        details: details,
+                        details: {datapoint_count, message: result.message}
                     })
                 });
                 return;
             }
         }
 
+        isLoading = true;
         handlingNext = true;
         just_used_proceeding_stop = false;
-        transition_done = false;
-        let next_phase = experiment_phase;
+
+        // Only increment counters if not in 'teaching'
         if (experiment_phase !== 'teaching') {
             datapoint_count++;
             cycles_completed++;
         }
 
-        // Check if intro is over. Intro test has same number of cycles as end test
-        if (experiment_phase === 'intro-test' && datapoint_count > parseInt(PUBLIC_END_TEST_CYCLES)) {
-            // After completing pre-test, switch to teaching
-            cycles_completed = 0; // Reset for teaching cycle
-            datapoint_count = 1; // Reset for teaching cycle
-            next_phase = 'teaching';
-            transition_done = true;
-            introPopupVisible.set(true);
-        }
+        let nextPhase: TTestOrTeaching = experiment_phase;
 
-        // Check if all cycles (teach-test cycles + end-test cycles) are completed
-        if (cycles_completed >= parseInt(PUBLIC_TEACH_TEST_CYCLES) + parseInt(PUBLIC_END_TEST_CYCLES)) {
+        // Determine next phase based on current state
+        if (experiment_phase === 'intro-test' && datapoint_count > parseInt(PUBLIC_END_TEST_CYCLES)) {
+            // Transition from intro-test to teaching
+            cycles_completed = 0;
+            datapoint_count = 1;
+            nextPhase = 'teaching';
+            introPopupVisible.set(true);
+        } else if (cycles_completed >= parseInt(PUBLIC_TEACH_TEST_CYCLES) + parseInt(PUBLIC_END_TEST_CYCLES)) {
+            // End of experiment
             goto(`${base}/exit?user_id=${user_id}&sg=${study_group}`);
             return;
-        }
-
-        if (experiment_phase === 'test') {
-            if (cycles_completed == parseInt(PUBLIC_TEACH_TEST_CYCLES)) {
-                // If teach-test cycles are complete, move to final-test
+        } else if (experiment_phase === 'test') {
+            if (cycles_completed === parseInt(PUBLIC_TEACH_TEST_CYCLES)) {
+                // Transition from test to final-test
+                nextPhase = 'final-test';
+                datapoint_count = 1;
                 selfAssesmentPopupVisible.set(true);
-                next_phase = 'final-test';
-                datapoint_count = 1; // Reset datapoint count for final-test phase
-                transition_done = true;
             } else {
-                // Switch to teaching after a test, if not yet completed all teach-test cycles
-                next_phase = 'teaching';
-                transition_done = true;
+                // Switch back to teaching after a test cycle
+                nextPhase = 'teaching';
             }
-        } else if (experiment_phase === 'teaching' && !transition_done) {
-            // After teaching, if not coming from test_intro, always switch to testing in the next cycle
-            next_phase = 'test';
+        } else if (experiment_phase === 'teaching') {
+            // After teaching, default to testing
+            nextPhase = 'test';
         }
 
-        // Fetch the appropriate datapoint based on the current phase
-        await getDatapoint(next_phase);
-        setNewCurrentDatapoint();
-        experiment_phase = next_phase;
-        logNextEvent();
-        isLoading = false;
-        handlingNext = false;
+        // Fetch the next datapoint and update the current state
+        try {
+            await getDatapoint(nextPhase);
+            setNewCurrentDatapoint();
+            experiment_phase = nextPhase;
+            logNextEvent();
+        } catch (error) {
+            console.error("Error fetching next datapoint:", error);
+        } finally {
+            isLoading = false;
+            handlingNext = false;
+        }
     }
 
     async function getDatapoint(type: TTestOrTeaching) {
@@ -378,7 +368,6 @@
     }
 
     async function setUserPrediction(event) {
-        console.log("Setting Prediction", experiment_phase, datapoint_count, event.detail.user_prediction);
         try {
             const response = await backend.xai(user_id).set_user_prediction(
                 experiment_phase,
@@ -520,4 +509,5 @@
         {/if}
     {/if}
 {/if}
+
 

@@ -3,7 +3,8 @@
     import {base} from '$app/paths';
     import {Step, Stepper} from '@skeletonlabs/skeleton';
     import {onMount} from 'svelte';
-    import {PUBLIC_TEACH_TEST_CYCLES} from "$env/static/public";
+    import { env } from '$env/dynamic/public';
+    const PUBLIC_DATASET_NAME = env.PUBLIC_DATASET_NAME;
     import {userId} from "$lib/shared";
 
     let gender: string;

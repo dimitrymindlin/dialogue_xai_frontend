@@ -2,7 +2,9 @@
     import {goto} from '$app/navigation';
     import {base} from '$app/paths';
     import {userId} from '$lib/shared';
-    import {PUBLIC_DATASET_NAME} from '$env/static/public';
+    import { env } from '$env/dynamic/public';
+
+    const PUBLIC_DATASET_NAME = env.PUBLIC_DATASET_NAME;
 
     let show_tool = true;
 

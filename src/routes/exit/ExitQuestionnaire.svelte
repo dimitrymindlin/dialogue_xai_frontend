@@ -3,8 +3,9 @@
     import {base} from '$app/paths';
     import {Step, Stepper, RangeSlider} from '@skeletonlabs/skeleton';
     import backend from '$lib/backend';
-    import {PUBLIC_DATASET_NAME} from '$env/static/public';
     import {logAttentionCheck} from '$lib/attentioncheck.ts';
+    import { env } from '$env/dynamic/public';
+    const PUBLIC_DATASET_NAME = env.PUBLIC_DATASET_NAME;
 
     export let user_id: string;
     export let study_group: string;

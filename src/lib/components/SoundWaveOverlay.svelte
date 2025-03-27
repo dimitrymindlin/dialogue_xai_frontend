@@ -6,7 +6,10 @@
     const dispatch = createEventDispatcher();
     
     // API URL for backend communication
-    const API_URL = 'http://localhost:5000';
+    const API_URL = 'http://localhost:4555';
+    
+    // Global flag to check if overlay is closed
+    let isOverlayClosed = false;
     
     // Props to receive user_id from parent component
     export let user_id = ''
@@ -14,14 +17,9 @@
     // Audio player for TTS
     let audioPlayer: HTMLAudioElement;
     
-    // Function to close the overlay when clicking outside the content area
-    function handleBackdropClick(event: MouseEvent) {
-        // Only close if the click was directly on the backdrop, not on its children
-        if (event.target === event.currentTarget) {
-            dispatch('close');
-        }
-    }
-
+    // Error handling
+    let recognitionErrorMessage = '';
+    
     // Audio visualization variables
     let audioContext: AudioContext | null = null;
     let analyser: AnalyserNode | null = null;
@@ -84,6 +82,114 @@
     let apiError = '';
     let isProcessing = false; // New variable to track API processing state
     
+    // Function to close the overlay when clicking outside the content area
+    function handleBackdropClick(event: MouseEvent) {
+        // Only close if the click was directly on the backdrop, not on its children
+        if (event.target === event.currentTarget) {
+            cleanupAndClose();
+        }
+    }
+
+    // Function to handle cleanup and close the overlay
+    function cleanupAndClose() {
+        console.log('Cleaning up and closing overlay');
+        
+        // Set overlay closed flag to prevent further processing
+        isOverlayClosed = true;
+        
+        // Reset state variables immediately
+        isResponding = false;
+        isProcessing = false;
+        isRecognizing = false;
+        isListening = false;
+        recognitionPaused = false;
+        transcript = '';
+        responseText = '';
+        
+        // Force stop any speech synthesis immediately
+        if (speechSynthesis) {
+            try {
+                speechSynthesis.cancel();
+                console.log('Speech synthesis canceled');
+            } catch (error) {
+                console.error('Error canceling speech synthesis:', error);
+            }
+        }
+        
+        // Force stop any current audio playback
+        if (audioPlayer) {
+            try {
+                audioPlayer.pause();
+                audioPlayer.currentTime = 0;
+                if (audioPlayer.src) {
+                    URL.revokeObjectURL(audioPlayer.src);
+                    audioPlayer.src = '';
+                }
+                console.log('Audio playback stopped');
+            } catch (error) {
+                console.error('Error stopping audio playback:', error);
+            }
+        }
+        
+        // Force stop animation frame
+        if (animationFrameId) {
+            try {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = 0;
+                console.log('Animation frame canceled');
+            } catch (error) {
+                console.error('Error canceling animation frame:', error);
+            }
+        }
+        
+        // Force disconnect microphone
+        if (microphone && audioContext) {
+            try {
+                microphone.disconnect();
+                microphone = null;
+                console.log('Microphone disconnected');
+            } catch (error) {
+                console.error('Error disconnecting microphone:', error);
+            }
+        }
+        
+        // Force close audio context
+        if (audioContext) {
+            try {
+                if (audioContext.state !== 'closed') {
+                    audioContext.close();
+                }
+                audioContext = null;
+                console.log('Audio context closed');
+            } catch (error) {
+                console.error('Error closing audio context:', error);
+            }
+        }
+        
+        // Force stop speech recognition
+        if (recognition) {
+            try {
+                recognition.onend = (() => {}) as (event: Event) => void;
+                recognition.stop();
+                recognition = null;
+                console.log('Speech recognition stopped');
+            } catch (error) {
+                console.error('Error stopping speech recognition:', error);
+            }
+        }
+        
+        // Clear any timers
+        if (silenceTimer) {
+            clearTimeout(silenceTimer);
+            silenceTimer = null;
+            console.log('Silence timer cleared');
+        }
+        
+        // Dispatch close event to parent
+        dispatch('close');
+        console.log('Overlay closed');
+    }
+    
     // Helper function to clean HTML tags and extract first paragraph for speech
     function cleanTextForSpeech(text: string): string {
         // If text doesn't contain HTML tags, return it as is
@@ -97,10 +203,7 @@
             tempDiv.innerHTML = text;
             
             // Get the first paragraph if it exists
-            const firstParagraph = tempDiv.querySelector('p');
-            if (firstParagraph) {
-                return firstParagraph.textContent || '';
-            }
+
             
             // If no paragraphs found, return the text content of the div (strips all HTML)
             return tempDiv.textContent || '';
@@ -149,6 +252,7 @@
             
             recognition.onstart = () => {
                 isRecognizing = true;
+                recognitionErrorMessage = ''; // Clear any previous error messages
                 console.log('Speech recognition started');
             };
             
@@ -205,9 +309,21 @@
                     if (noSpeechErrorCount > maxNoSpeechErrors) {
                         console.log('Too many no-speech errors, not restarting recognition');
                         isRecognizing = false;
+                        recognitionErrorMessage = 'No speech detected. Please try speaking again.';
                         return;
                     }
+                } else if (event.error === 'network') {
+                    recognitionErrorMessage = 'Network error. Please check your internet connection and try again.';
+                    isRecognizing = false;
+                } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                    recognitionErrorMessage = 'Microphone access denied. Please allow microphone access and try again.';
+                    isRecognizing = false;
+                } else if (event.error === 'aborted') {
+                    // This is usually not a problem, just log it
+                    console.log('Speech recognition aborted');
                 } else {
+                    // For other errors
+                    recognitionErrorMessage = `Speech recognition error: ${event.error}. Please try again.`;
                     isRecognizing = false;
                 }
             };
@@ -243,6 +359,12 @@
     
     // Function to resume recognition
     function resumeRecognition() {
+        // If overlay is closed, don't resume anything
+        if (isOverlayClosed) {
+            console.log('Overlay closed, not resuming recognition');
+            return;
+        }
+
         recognitionPaused = false;
         if (recognition && isListening && !isRecognizing) {
             try {
@@ -281,6 +403,12 @@
     
     // Send transcript to API
     async function sendTranscriptToAPI(text: string) {
+        // If overlay is closed, don't process anything
+        if (isOverlayClosed) {
+            console.log('Overlay closed, ignoring API call');
+            return;
+        }
+        
         // Prevent multiple simultaneous API calls
         if (isProcessingTranscript) {
             console.log('Already processing a transcript, ignoring:', text);
@@ -407,6 +535,12 @@
     
     // Play audio data from API response
     async function playAudioFromResponse(audioData: string) {
+        // If overlay is closed, don't play anything
+        if (isOverlayClosed) {
+            console.log('Overlay closed, ignoring audio playback');
+            return;
+        }
+
         try {
             console.log('Playing audio from API response');
             
@@ -426,6 +560,12 @@
                 
                 // Set up event handlers
                 audioPlayer.onplay = () => {
+                    // If overlay is closed, stop playback immediately
+                    if (isOverlayClosed) {
+                        audioPlayer.pause();
+                        return;
+                    }
+                    
                     console.log('Audio playback started');
                     isResponding = true;
                     
@@ -434,9 +574,13 @@
                 };
                 
                 audioPlayer.onended = () => {
+                    // If overlay is closed, don't process anything
+                    if (isOverlayClosed) {
+                        return;
+                    }
+                    
                     console.log('Audio playback ended');
                     isResponding = false;
-                    responseText = ''; // Clear response text when done speaking
                     
                     // Revoke the object URL to free up memory
                     URL.revokeObjectURL(audioPlayer.src);
@@ -446,14 +590,26 @@
                     
                     // Resume recognition after speaking is done
                     setTimeout(() => {
-                        resumeRecognition();
+                        // Check if overlay is still open before resuming
+                        if (!isOverlayClosed) {
+                            resumeRecognition();
+                        }
                     }, 500); // Small delay before resuming recognition
+                    
+                    // Clear response text after a delay to ensure it's visible
+                    setTimeout(() => {
+                        // Check if overlay is still open before clearing
+                        if (!isOverlayClosed) {
+                            responseText = '';
+                        }
+                    }, 3000); // Keep text visible for 3 seconds after speaking ends
                 };
                 
                 audioPlayer.onerror = (event) => {
                     console.error('Audio playback error:', event);
                     isResponding = false;
-                    responseText = ''; // Clear response text on error
+                    // Don't clear response text immediately on error
+                    // responseText = ''; // Clear response text on error
                     
                     // Revoke the object URL to free up memory
                     URL.revokeObjectURL(audioPlayer.src);
@@ -463,6 +619,11 @@
                     
                     // Resume recognition after error
                     resumeRecognition();
+                    
+                    // Clear response text after a delay to ensure it's visible
+                    setTimeout(() => {
+                        responseText = '';
+                    }, 3000); // Keep text visible for 3 seconds after error
                 };
             } else {
                 // Stop any current playback
@@ -619,6 +780,12 @@
     
     // Fallback to browser's speech synthesis
     function speakResponseWithBrowser(text: string) {
+        // If overlay is closed, don't speak anything
+        if (isOverlayClosed) {
+            console.log('Overlay closed, ignoring speech synthesis');
+            return;
+        }
+
         try {
             if (!speechSynthesis) {
                 console.error('Speech synthesis not supported in this browser');
@@ -665,6 +832,12 @@
             
             // Set event handlers
             utterance.onstart = () => {
+                // If overlay is closed, cancel speech immediately
+                if (isOverlayClosed) {
+                    speechSynthesis.cancel();
+                    return;
+                }
+                
                 isResponding = true;
                 console.log('Speech synthesis started');
                 
@@ -673,8 +846,12 @@
             };
             
             utterance.onend = () => {
+                // If overlay is closed, don't process anything
+                if (isOverlayClosed) {
+                    return;
+                }
+                
                 isResponding = false;
-                responseText = ''; // Clear response text when done speaking
                 console.log('Speech synthesis ended');
                 
                 // Stop audio visualization for the response
@@ -682,20 +859,37 @@
                 
                 // Resume recognition after speaking is done
                 setTimeout(() => {
-                    resumeRecognition();
+                    // Check if overlay is still open before resuming
+                    if (!isOverlayClosed) {
+                        resumeRecognition();
+                    }
                 }, 500); // Small delay before resuming recognition
+                
+                // Clear response text after a delay to ensure it's visible
+                setTimeout(() => {
+                    // Check if overlay is still open before clearing
+                    if (!isOverlayClosed) {
+                        responseText = '';
+                    }
+                }, 3000); // Keep text visible for 3 seconds after speaking ends
             };
             
             utterance.onerror = (event) => {
                 console.error('Speech synthesis error:', event);
                 isResponding = false;
-                responseText = ''; // Clear response text on error
+                // Don't clear response text immediately on error
+                // responseText = ''; // Clear response text on error
                 
                 // Stop audio visualization for the response
                 stopResponseVisualization();
                 
                 // Resume recognition after error
                 resumeRecognition();
+                
+                // Clear response text after a delay to ensure it's visible
+                setTimeout(() => {
+                    responseText = '';
+                }, 3000); // Keep text visible for 3 seconds after error
             };
             
             // Speak the utterance
@@ -704,8 +898,14 @@
         } catch (error) {
             console.error('Error speaking response with browser:', error);
             isResponding = false;
-            responseText = ''; // Clear response text on error
+            // Don't clear response text immediately on error
+            // responseText = ''; // Clear response text on error
             resumeRecognition(); // Resume recognition on error
+            
+            // Clear response text after a delay to ensure it's visible
+            setTimeout(() => {
+                responseText = '';
+            }, 3000); // Keep text visible for 3 seconds after error
         }
     }
     
@@ -732,6 +932,7 @@
         // but with no audio input, the volume level will be 0
     }
     
+    // Start audio visualization
     async function startAudioVisualization() {
         try {
             // Request microphone access
@@ -751,17 +952,25 @@
             dataArray = new Uint8Array(bufferLength);
             
             isListening = true;
+            recognitionErrorMessage = ''; // Clear any previous error messages
             
             // Start visualization loop
             visualize();
             
             // Start speech recognition
-            if (recognition) {
-                recognition.start();
+            if (recognition && !isRecognizing) { // Only start if not already recognizing
+                try {
+                    recognition.start();
+                    console.log('Speech recognition started initially');
+                } catch (error) {
+                    console.error('Error starting speech recognition:', error);
+                    recognitionErrorMessage = 'Error starting speech recognition. Please refresh and try again.';
+                }
             }
             
         } catch (error) {
             console.error('Error accessing microphone:', error);
+            recognitionErrorMessage = 'Error accessing microphone. Please ensure your microphone is connected and you have granted permission.';
         }
     }
     
@@ -816,7 +1025,109 @@
         }
     }
     
+    // Add a retry button to the UI
+    function handleRetryClick() {
+        resetSpeechRecognition();
+    }
+    
+    // Add a reset function to completely reset the speech recognition
+    function resetSpeechRecognition() {
+        // Stop current recognition if running
+        if (recognition && isRecognizing) {
+            try {
+                recognition.stop();
+            } catch (error) {
+                console.error('Error stopping speech recognition during reset:', error);
+            }
+        }
+        
+        // Reset variables
+        isRecognizing = false;
+        recognitionPaused = false;
+        noSpeechErrorCount = 0;
+        recognitionErrorMessage = '';
+        
+        // Re-initialize speech recognition
+        initSpeechRecognition();
+        
+        // Restart if we should be listening
+        if (isListening && recognition) {
+            setTimeout(() => {
+                try {
+                    recognition?.start();
+                    console.log('Speech recognition restarted after reset');
+                } catch (error) {
+                    console.error('Error starting speech recognition after reset:', error);
+                }
+            }, 500);
+        }
+    }
+    
+    // Function to skip current response and resume listening
+    function skipResponse() {
+        console.log('Skipping current response');
+        
+        // Stop any current speech
+        if (speechSynthesis) {
+            speechSynthesis.cancel();
+        }
+        
+        // Stop any current audio playback
+        if (audioPlayer) {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+        }
+        
+        // Clear response text
+        responseText = '';
+        
+        // Reset responding state
+        isResponding = false;
+        
+        // Completely reset the audio context and microphone to ensure fresh start
+        if (microphone && audioContext) {
+            microphone.disconnect();
+            microphone = null;
+        }
+        
+        if (audioContext) {
+            if (audioContext.state !== 'closed') {
+                try {
+                    audioContext.close();
+                } catch (error) {
+                    console.error('Error closing audio context:', error);
+                }
+            }
+            audioContext = null;
+        }
+        
+        // Reset recognition
+        if (recognition && isRecognizing) {
+            try {
+                recognition.stop();
+            } catch (error) {
+                console.error('Error stopping speech recognition during skip:', error);
+            }
+        }
+        
+        // Reset variables
+        isRecognizing = false;
+        recognitionPaused = false;
+        noSpeechErrorCount = 0;
+        
+        // Small delay before restarting everything
+        setTimeout(() => {
+            // Restart audio visualization with fresh context
+            startAudioVisualization();
+            
+            console.log('Audio visualization and recognition restarted after skip');
+        }, 500);
+    }
+    
     onMount(() => {
+        // Reset overlay closed flag
+        isOverlayClosed = false;
+        
         // Initialize speech recognition
         initSpeechRecognition();
         
@@ -853,35 +1164,54 @@
 
 <div class="overlay-backdrop" on:click={handleBackdropClick}>
     <div class="voice-visualization-container">
-        <button class="close-button" on:click={() => dispatch('close')}>
+        <button class="close-button" on:click={cleanupAndClose}>
             <i class="fas fa-times"></i>
         </button>
         
         <div class="visualization-content">
-            <div class="planet-wrapper">
-                <div class="planet-container" style="width: {planetSize}px; height: {planetSize}px">
-                    <div class="planet">
-                        <div class="ring"></div>
-                        <div class="inner-planet"></div>
+            <div class="planet-section">
+                <div class="planet-wrapper">
+                    <div class="planet-container" style="width: {planetSize}px; height: {planetSize}px">
+                        <div class="planet">
+                            <div class="ring"></div>
+                            <div class="inner-planet"></div>
+                        </div>
                     </div>
                 </div>
             </div>
             
-            <div class="status-text">
-                {#if apiError}
-                    <div class="error-text">Error: {apiError}</div>
-                {:else if isProcessing}
-                    <div class="processing-text">
-                        Processing<span class="dot-animation">...</span>
+            <div class="text-section">
+                <div class="status-text-container">
+                    <div class="status-text">
+                        {#if apiError}
+                            <div class="error-text">Error: {apiError}</div>
+                        {:else if recognitionErrorMessage}
+                            <div class="error-text">
+                                {recognitionErrorMessage}
+                                <button class="retry-button" on:click={handleRetryClick}>
+                                    Retry
+                                </button>
+                            </div>
+                        {:else if isProcessing}
+                            <div class="processing-text">
+                                Processing<span class="dot-animation">...</span>
+                            </div>
+                        {:else if isResponding}
+                            <div class="response-text">{responseText}</div>
+                        {:else if isRecognizing && transcript}
+                            <div class="transcript-text">{transcript}</div>
+                        {:else if isListening}
+                            Listening to your voice...
+                        {:else}
+                            Initializing microphone...
+                        {/if}
                     </div>
-                {:else if isResponding}
-                    <div class="response-text">{responseText}</div>
-                {:else if isRecognizing && transcript}
-                    <div class="transcript-text">{transcript}</div>
-                {:else if isListening}
-                    Listening to your voice...
-                {:else}
-                    Initializing microphone...
+                </div>
+                
+                {#if isResponding && !isProcessing}
+                    <button class="skip-button" on:click={skipResponse}>
+                        Skip
+                    </button>
                 {/if}
             </div>
         </div>
@@ -904,9 +1234,9 @@
     
     .voice-visualization-container {
         position: relative;
-        width: 90%; /* Increased width */
-        max-width: 700px; /* Increased max-width */
-        height: 600px; /* Increased height */
+        width: 98%; /* Increased width further */
+        max-width: 1000px; /* Increased max-width further */
+        height: 850px; /* Increased height further */
         background-color: white;
         border-radius: 24px; /* Slightly larger border radius */
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
@@ -944,20 +1274,40 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: space-between;
         width: 100%;
         height: 100%;
         position: relative;
-        padding: 20px;
+        padding: 30px; /* Increased padding */
+    }
+    
+    .planet-section {
+        width: 100%;
+        height: 55%; /* Increased height for planet section */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 30px; /* Increased margin */
+        padding: 20px; /* Added padding */
+    }
+    
+    .text-section {
+        width: 100%;
+        height: 40%; /* Adjusted height for text section */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        overflow: hidden;
     }
     
     .planet-wrapper {
         width: 100%;
-        height: 70%; /* Use percentage of container height */
+        height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
-        overflow: hidden; /* Prevent planet from overflowing */
+        overflow: visible; /* Changed to visible to show the full ring */
     }
     
     .planet-container {
@@ -965,8 +1315,8 @@
         align-items: center;
         justify-content: center;
         transition: width 0.3s ease, height 0.3s ease;
-        max-width: 100%; /* Ensure it doesn't exceed container width */
-        max-height: 100%; /* Ensure it doesn't exceed container height */
+        max-width: 85%; /* Reduced to ensure full visibility with ring */
+        max-height: 85%; /* Reduced to ensure full visibility with ring */
     }
     
     .planet {
@@ -1006,8 +1356,8 @@
         position: absolute;
         top: 50%;
         left: 50%;
-        width: 120%;
-        height: 120%;
+        width: 120%; /* Increased back to 120% since we have more space */
+        height: 120%; /* Increased back to 120% since we have more space */
         transform: translate(-50%, -50%);
         border-radius: 50%;
     }
@@ -1019,44 +1369,84 @@
         left: 0;
         width: 100%;
         height: 100%;
-        border: 2px solid transparent;
-        border-top: 2px solid #333;
-        border-right: 2px solid #333;
+        border: 3px solid transparent; /* Increased border width for better visibility */
+        border-top: 3px solid #333;
+        border-right: 3px solid #333;
         border-radius: 50%;
         animation: spin-reverse 3s linear infinite;
     }
     
+    .status-text-container {
+        width: 90%;
+        max-width: 700px;
+        background-color: #f5f5f5; /* Light gray background like in TTM-Chat */
+        border-radius: 16px;
+        padding: 25px; /* Increased padding */
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        max-height: 300px; /* Maximum height */
+        overflow-y: auto; /* Add scrolling if content is too long */
+    }
+    
     .status-text {
-        margin-top: 30px; /* Increased margin */
-        font-size: 18px; /* Reduced font size from 22px to 18px */
-        color: #555;
+        font-size: 18px; /* Increased font size for better visibility */
+        color: #333; /* Darker text color for better contrast */
         font-weight: 500;
         text-align: center;
-        max-width: 80%;
-        min-height: 60px; /* Ensure space for text */
+        width: 100%;
+        overflow-wrap: break-word; /* Ensure long words break */
+        word-wrap: break-word;
+        word-break: break-word; /* For non-standard browsers */
+        hyphens: auto;
+        line-height: 1.5; /* Improved line height for readability */
     }
     
     .transcript-text {
         color: #1976d2;
         font-style: italic;
+        font-weight: 600; /* Make transcript text bolder */
     }
     
     .response-text {
         color: #2e7d32;
+        font-weight: 600; /* Make response text bolder */
+        font-size: 20px; /* Larger font size for response text */
+        margin: 10px 0; /* Add margin for better spacing */
+        display: block; /* Ensure it takes full width */
     }
     
     .error-text {
         color: #d32f2f;
+        font-weight: 600; /* Make error text bolder */
     }
     
     .processing-text {
         color: #1976d2;
-        font-weight: 500;
+        font-weight: 600; /* Make processing text bolder */
+        font-size: 20px; /* Larger font size for processing text */
     }
     
     .dot-animation {
         display: inline-block;
         animation: dotAnimation 1.5s infinite;
+    }
+    
+    .skip-button {
+        padding: 10px 30px;
+        background-color: #f44336; /* Red color for skip button */
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        transition: background-color 0.2s;
+        margin-top: 10px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    
+    .skip-button:hover {
+        background-color: #d32f2f;
     }
     
     @keyframes dotAnimation {
@@ -1114,5 +1504,21 @@
         100% {
             transform: translateY(0);
         }
+    }
+
+    .retry-button {
+        margin-top: 10px;
+        padding: 5px 15px;
+        background-color: #1976d2;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.2s;
+    }
+    
+    .retry-button:hover {
+        background-color: #1565c0;
     }
 </style> 
