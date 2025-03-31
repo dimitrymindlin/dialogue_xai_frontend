@@ -6,7 +6,7 @@
     const dispatch = createEventDispatcher();
     
     // API URL for backend communication
-    const API_URL = 'http://localhost:4555';
+    const API_URL = 'http://localhost:5000';
     
     // Props to receive user_id from parent component
     export let user_id = ''
