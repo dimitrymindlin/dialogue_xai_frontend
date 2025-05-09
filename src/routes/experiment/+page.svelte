@@ -14,7 +14,8 @@
     import {env} from '$env/dynamic/public';
 
     const PUBLIC_TEACH_TEST_CYCLES = env.PUBLIC_TEACH_TEST_CYCLES;
-    const PUBLIC_END_TEST_CYCLES = env.PUBLIC_END_TEST_CYCLES;
+    const PUBLIC_FINAL_TEST_CYCLES = env.PUBLIC_FINAL_TEST_CYCLES;
+    const PUBLIC_INTRO_TEST_CYCLES = env.PUBLIC_INTRO_TEST_CYCLES;
 
     import {goto} from '$app/navigation';
     import {base} from '$app/paths';
@@ -51,6 +52,23 @@
     function handleConfirm() {
         selfAssesmentPopupVisible.set(false);
         introPopupVisible.set(false);
+    }
+
+    const CONFIG = {
+        introPoints: PUBLIC_INTRO_TEST_CYCLES,
+        teachCycles: PUBLIC_TEACH_TEST_CYCLES,
+        testCycles: PUBLIC_TEACH_TEST_CYCLES,
+        finalTestPoints: PUBLIC_FINAL_TEST_CYCLES
+    };
+
+    type Phase = 'intro-test' | 'teaching' | 'test' | 'final-test' | 'exit';
+    type Popup = 'intro' | 'self-assessment';
+
+
+    interface Next {
+        phase: Phase;
+        count: number;
+        popup?: Popup;
     }
 
     /**
@@ -251,25 +269,61 @@
         }, 700);
     }
 
-    async function handleNext(e: any) {
-        if (handlingNext) return; // Prevent duplicate clicks
+    // Helper to decide the next phase & count
+    function getNextPhase(current: Phase, count: number): Next {
+        switch (current) {
+            case 'intro-test':
+                if (count < CONFIG.introPoints) {
+                    return {phase: 'intro-test', count: count + 1};
+                }
+                return {phase: 'teaching', count: 1, popup: 'intro'};
 
-        // Check proceeding requirement if in 'teaching'
+            case 'teaching':
+                if (count < CONFIG.teachCycles) {
+                    return {phase: 'test', count: 1};
+                }
+                // finished all teach cycles → final-test
+                return {phase: 'final-test', count: 1, popup: 'self-assessment'};
+
+            case 'test':
+                if (count < CONFIG.testCycles) {
+                    return {phase: 'teaching', count: 1};
+                }
+                // after all test cycles, end
+                return {phase: 'exit', count: 0};
+
+            case 'final-test':
+                if (count < CONFIG.finalTestPoints) {
+                    return {phase: 'final-test', count: count + 1};
+                }
+                return {phase: 'exit', count: 0};
+
+            default:
+                return {phase: 'exit', count: 0};
+        }
+    }
+
+    async function handleNext(e: any) {
+        if (handlingNext) return;
+
+        // A. Teaching-phase “proceeding” check
         if (experiment_phase === 'teaching' && !just_used_proceeding_stop) {
             const res = await backend.xai(user_id).get_proceeding_okay();
-            const result = await res.json() as { proceeding_okay: boolean, message: TChatMessage };
-            if (!result.proceeding_okay) {
-                pushMessage(result.message);
+            const {proceeding_okay, message} = await res.json() as {
+                proceeding_okay: boolean;
+                message: TChatMessage;
+            };
+            if (!proceeding_okay) {
+                pushMessage(message);
                 just_used_proceeding_stop = true;
-                // Log proceeding stop event
-                fetch(`${base}/api/log_event`, {
+                await fetch(`${base}/api/log_event`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         user_id,
                         event_source: 'teaching',
                         event_type: 'proceeding_stop',
-                        details: {datapoint_count, message: result.message}
+                        details: {datapoint_count, message}
                     })
                 });
                 return;
@@ -280,45 +334,29 @@
         handlingNext = true;
         just_used_proceeding_stop = false;
 
-        // Only increment counters if not in 'teaching'
-        if (experiment_phase !== 'teaching') {
-            datapoint_count++;
-            cycles_completed++;
-        }
+        // B. Decide next
+        const {phase: nextPhase, count: nextCount, popup} =
+            getNextPhase(experiment_phase as Phase, datapoint_count);
 
-        let nextPhase: TTestOrTeaching = experiment_phase;
-
-        // Determine next phase based on current state
-        if (experiment_phase === 'intro-test' && datapoint_count > parseInt(PUBLIC_END_TEST_CYCLES)) {
-            // Transition from intro-test to teaching
-            cycles_completed = 0;
-            datapoint_count = 1;
-            nextPhase = 'teaching';
-            introPopupVisible.set(true);
-        } else if (cycles_completed >= parseInt(PUBLIC_TEACH_TEST_CYCLES) + parseInt(PUBLIC_END_TEST_CYCLES)) {
-            // End of experiment
+        // C. Handle exit
+        if (nextPhase === 'exit') {
             goto(`${base}/exit?user_id=${user_id}&sg=${study_group}`);
             return;
-        } else if (experiment_phase === 'test') {
-            if (cycles_completed === parseInt(PUBLIC_TEACH_TEST_CYCLES)) {
-                // Transition from test to final-test
-                nextPhase = 'final-test';
-                datapoint_count = 1;
-                selfAssesmentPopupVisible.set(true);
-            } else {
-                // Switch back to teaching after a test cycle
-                nextPhase = 'teaching';
-            }
-        } else if (experiment_phase === 'teaching') {
-            // After teaching, default to testing
-            nextPhase = 'test';
         }
 
-        // Fetch the next datapoint and update the current state
+        // D. Show any popups
+        if (popup === 'intro') {
+            introPopupVisible.set(true);
+        } else if (popup === 'self-assessment') {
+            selfAssesmentPopupVisible.set(true);
+        }
+
+        // E. Fetch & update state
         try {
             await getDatapoint(nextPhase);
             setNewCurrentDatapoint();
             experiment_phase = nextPhase;
+            datapoint_count = nextCount;
             logNextEvent();
         } catch (error) {
             console.error("Error fetching next datapoint:", error);
