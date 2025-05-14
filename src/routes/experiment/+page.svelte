@@ -111,7 +111,7 @@
     let feature_names = data.feature_names;
     let user_id: string = data.user_id;
     let study_group = data.study_group;
-    let experiment_phase: TTestOrTeaching = 'intro-test';
+let experiment_phase: TTestOrTeaching = CONFIG.introPoints > 0 ? 'intro-test' : 'teaching';
 
     // Information that should not be shown to the user
     let true_label: string = data.datapoint.true_label;
@@ -271,6 +271,10 @@
 
     // Helper to decide the next phase & count
     function getNextPhase(current: Phase, count: number): Next {
+        // Skip intro entirely when introPoints is zero
+        if (current === 'intro-test' && CONFIG.introPoints <= 0) {
+            return { phase: 'teaching', count: 1 };
+        }
         switch (current) {
             case 'intro-test':
                 if (count < CONFIG.introPoints) {
