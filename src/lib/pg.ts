@@ -1,9 +1,10 @@
 import postgres from 'postgres';
 import type {JSONValue} from 'postgres';
 
-import dotenv from 'dotenv';
-dotenv.config();
 
+// import dotenv from 'dotenv';
+// dotenv.config();
+// Environment variables in server-side code
 const POSTGRES_USER = process.env.POSTGRES_USER;
 const POSTGRES_PASSWORD = process.env.POSTGRES_PASSWORD;
 const POSTGRES_DB = process.env.POSTGRES_DB;

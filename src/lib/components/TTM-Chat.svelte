@@ -219,6 +219,9 @@
             element.scrollTo(0, element.scrollHeight);
         }
     });
+
+    // Add environment variable for message icon
+    const MESSAGE_ICON = import.meta.env.VITE_MESSAGE_ICON === 'true';
 </script>
 
 <svelte:head>
@@ -262,18 +265,8 @@
                 />
             </div>
             
-            <!-- Show send button when there's text, otherwise show microphone button -->
-            {#if hasText}
-                <button 
-                    type="button"
-                    class="send-button"
-                    on:click={sendMessage}
-                    title="Send message"
-                >
-                    <i class="fas fa-paper-plane"></i>
-                </button>
-            {:else}
-                <!-- Voice recognition section with microphone and voice wave -->
+            {#if MESSAGE_ICON}
+                <!-- Show only microphone and speech icons -->
                 <div class="voice-recognition-section">
                     <button 
                         type="button"
@@ -290,8 +283,6 @@
                             <i class="fas fa-microphone"></i>
                         {/if}
                     </button>
-                    
-                    <!-- Voice wave visualization -->
                     <div class="voice-wave-container {isRecording ? 'active' : ''}">
                         {#if isRecording}
                             <div class="voice-wave">
@@ -318,6 +309,18 @@
                         {/if}
                     </div>
                 </div>
+            {:else}
+                <!-- Show only send button when MESSAGE_ICON is false (default) -->
+                {#if hasText}
+                    <button 
+                        type="button"
+                        class="send-button"
+                        on:click={sendMessage}
+                        title="Send message"
+                    >
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                {/if}
             {/if}
             
             {#if study_group === 'chat'}
