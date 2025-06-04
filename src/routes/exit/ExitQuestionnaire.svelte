@@ -33,7 +33,6 @@
         'The chatbots appears confused.', // AC4
         "While explaining, it was important for the chatbot to monitor whether I understood everything.", // moni2
         "The chatbot responded when I signaled non-understanding.", // moni3
-        'The chatbot interacts socially with me.', // AS3
         "The chatbot took my statements into account.", // coco4
         'The chatbot acts intentionally', // AI1
         'I can see myself using the chatbot in the future.', // UAA2

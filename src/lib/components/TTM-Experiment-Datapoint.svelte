@@ -11,7 +11,8 @@
 
     const dispatch = createEventDispatcher();
     const PUBLIC_TEACH_TEST_CYCLES = env.PUBLIC_TEACH_TEST_CYCLES;
-    const PUBLIC_END_TEST_CYCLES = env.PUBLIC_END_TEST_CYCLES;
+    const PUBLIC_FINAL_TEST_CYCLES = env.PUBLIC_FINAL_TEST_CYCLES;
+    const PUBLIC_INTRO_TEST_CYCLES = env.PUBLIC_INTRO_TEST_CYCLES;
 
     export let experimentPhase: TTestOrTeaching;
     export let interactiveOrStatic: TInteractiveOrStatic;
@@ -198,9 +199,9 @@
                 {:else if experimentPhase === 'teaching'}
                     {PUBLIC_TEACH_TEST_CYCLES}
                 {:else if experimentPhase === 'final-test'}
-                    {PUBLIC_END_TEST_CYCLES}
+                    {PUBLIC_FINAL_TEST_CYCLES}
                 {:else if experimentPhase === 'intro-test'}
-                    {PUBLIC_TEACH_TEST_CYCLES}
+                    {PUBLIC_INTRO_TEST_CYCLES}
                 {/if})
             </h2>
         {/if}

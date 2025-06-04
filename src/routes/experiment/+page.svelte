@@ -276,34 +276,33 @@ let experiment_phase: TTestOrTeaching = CONFIG.introPoints > 0 ? 'intro-test' : 
             return { phase: 'teaching', count: 1 };
         }
         switch (current) {
-            case 'intro-test':
-                if (count < CONFIG.introPoints) {
-                    return {phase: 'intro-test', count: count + 1};
-                }
-                return {phase: 'teaching', count: 1, popup: 'intro'};
+          case 'intro-test':
+            if (count < CONFIG.introPoints) {
+              return { phase: 'intro-test', count: count + 1 };
+            }
+            // After intro, start first teach-test cycle with cycle=1
+            return { phase: 'teaching', count: 1, popup: 'intro' };
 
-            case 'teaching':
-                if (count < CONFIG.teachCycles) {
-                    return {phase: 'test', count: 1};
-                }
-                // finished all teach cycles → final-test
-                return {phase: 'final-test', count: 1, popup: 'self-assessment'};
+          case 'teaching':
+            // Serve teaching for the current cycle, then move to test of same cycle
+            return { phase: 'test', count: count };
 
-            case 'test':
-                if (count < CONFIG.testCycles) {
-                    return {phase: 'teaching', count: 1};
-                }
-                // after all test cycles, end
-                return {phase: 'exit', count: 0};
+          case 'test':
+            if (count < CONFIG.teachCycles) {
+              // Completed test of cycle N, move to teaching of next cycle
+              return { phase: 'teaching', count: count + 1 };
+            }
+            // Completed all teach-test cycles, move to final-test
+            return { phase: 'final-test', count: 1, popup: 'self-assessment' };
 
-            case 'final-test':
-                if (count < CONFIG.finalTestPoints) {
-                    return {phase: 'final-test', count: count + 1};
-                }
-                return {phase: 'exit', count: 0};
+          case 'final-test':
+            if (count < CONFIG.finalTestPoints) {
+              return { phase: 'final-test', count: count + 1 };
+            }
+            return { phase: 'exit', count: 0 };
 
-            default:
-                return {phase: 'exit', count: 0};
+          default:
+            return { phase: 'exit', count: 0 };
         }
     }
 
@@ -341,6 +340,7 @@ let experiment_phase: TTestOrTeaching = CONFIG.introPoints > 0 ? 'intro-test' : 
         // B. Decide next
         const {phase: nextPhase, count: nextCount, popup} =
             getNextPhase(experiment_phase as Phase, datapoint_count);
+        datapoint_count = nextCount;
 
         // C. Handle exit
         if (nextPhase === 'exit') {
@@ -360,7 +360,6 @@ let experiment_phase: TTestOrTeaching = CONFIG.introPoints > 0 ? 'intro-test' : 
             await getDatapoint(nextPhase);
             setNewCurrentDatapoint();
             experiment_phase = nextPhase;
-            datapoint_count = nextCount;
             logNextEvent();
         } catch (error) {
             console.error("Error fetching next datapoint:", error);
