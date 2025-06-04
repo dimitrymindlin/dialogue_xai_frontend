@@ -71,7 +71,13 @@
                     }
                 }
                 
-                result += `<span class="word word-last">${lastWordHtml}</span>`;
+                // Add proper spacing - if this is not the first word, add a space before it
+                if (words.length > 1) {
+                    result += `<span class="word word-last">${lastWordHtml}</span>`;
+                } else {
+                    // If this is the first (and only) word, don't add extra spacing
+                    result = `<span class="word word-last">${lastWordHtml}</span>`;
+                }
             }
         }
         
@@ -96,11 +102,11 @@
         let baseSpeed: number;
         const textLength = fullText.length;
         
-        if (textLength > 800) baseSpeed = 25;
-        else if (textLength > 500) baseSpeed = 30;
-        else if (textLength > 300) baseSpeed = 35;
-        else if (textLength > 100) baseSpeed = 40;
-        else baseSpeed = 45;
+        if (textLength > 800) baseSpeed = 7;
+        else if (textLength > 500) baseSpeed = 9;
+        else if (textLength > 300) baseSpeed = 11;
+        else if (textLength > 100) baseSpeed = 12;
+        else baseSpeed = 15;
         
         typingSpeed = baseSpeed;
         
@@ -212,9 +218,9 @@
         if (message && !message.isUser && message.text) {
             const textLength = parseHTML(message.text).length;
             // Slightly faster for longer messages
-            if (textLength > 500) typingSpeed = 10;
-            else if (textLength > 200) typingSpeed = 15;
-            else typingSpeed = 20;
+            if (textLength > 500) typingSpeed = 5;
+            else if (textLength > 200) typingSpeed = 7;
+            else typingSpeed = 10;
         }
     }
 </script>
