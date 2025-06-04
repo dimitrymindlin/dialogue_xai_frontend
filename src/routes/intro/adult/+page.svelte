@@ -16,6 +16,8 @@
     let english_speaking_level: string;
     let fam_ml_val = -1;
     let fam_domain_val: number;
+    let ml_studies_participation = "";
+    let xai_studies_participation = "";
     let prolific_id = "";
     let consent_given: boolean = false;
     let pdfPath = `${base}/Adult-Consent.pdf`;
@@ -58,6 +60,8 @@
         const checks = [
             {condition: prolific_id === '', message: 'Please insert your prolific id before proceeding.'},
             {condition: fam_ml_val === -1, message: 'Please rate your familiarity with AI.'},
+            {condition: ml_studies_participation === '', message: 'Please indicate your participation in machine learning studies.'},
+            {condition: xai_studies_participation === '', message: 'Please indicate your participation in explainable AI studies.'},
         ];
 
         for (let check of checks) {
@@ -77,6 +81,8 @@
             fam_ml_val: fam_ml_val,
             fam_domain_val: fam_domain_val,
             english_speaking_level: english_speaking_level,
+            ml_studies_participation: ml_studies_participation,
+            xai_studies_participation: xai_studies_participation,
             experiment_start: experiment_start
         };
 
@@ -289,6 +295,24 @@
                         <option value="high">High: I am knowledgeable about AI and how it is developed.</option>
                         <option value="very high">Very high: I am highly knowledgeable in AI and can train algorithms.</option>
                         <option value="anonymous">Prefer not to say</option>
+                    </select>
+                </label>
+                <label for="ml_studies" class="label text-center">
+                    <span>Have you participated in machine learning studies before?</span>
+                    <select bind:value={ml_studies_participation} class="select py-1">
+                        <option value="" selected>- Select -</option>
+                        <option value="never">Never</option>
+                        <option value="a few times">A few times</option>
+                        <option value="regularly">Regularly</option>
+                    </select>
+                </label>
+                <label for="xai_studies" class="label text-center">
+                    <span>Have you participated in explainable AI studies before?</span>
+                    <select bind:value={xai_studies_participation} class="select py-1">
+                        <option value="" selected>- Select -</option>
+                        <option value="never">Never</option>
+                        <option value="a few times">A few times</option>
+                        <option value="regularly">Regularly</option>
                     </select>
                 </label>
             </div>
