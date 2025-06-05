@@ -81,6 +81,8 @@
                                 </RadioItem>
                                 <RadioItem name="likert" bind:group={answers[i]} value={-1}>Somewhat disagree
                                 </RadioItem>
+                                <RadioItem name="likert" bind:group={answers[i]} value={0}>Neutral
+                                </RadioItem>
                                 <RadioItem name="likert" bind:group={answers[i]} value={1}>Somewhat agree</RadioItem>
                                 <RadioItem name="likert" bind:group={answers[i]} value={2}>Strongly agree</RadioItem>
                             </RadioGroup>

@@ -78,6 +78,8 @@
                                 </RadioItem>
                                 <RadioItem name="likert" bind:group={answers[i]} value={-1}>Somewhat disagree
                                 </RadioItem>
+                                <RadioItem name="likert" bind:group={answers[i]} value={0}>Neutral
+                                </RadioItem>
                                 <RadioItem name="likert" bind:group={answers[i]} value={1}>Somewhat agree</RadioItem>
                                 <RadioItem name="likert" bind:group={answers[i]} value={2}>Strongly agree</RadioItem>
                             </RadioGroup>
@@ -95,10 +97,7 @@
             <Step>
                 <p class="text-center text-xl">
                     <b>Almost done!</b><br> <br>
-
-                    As a <b>last activity</b>, you will see new indidivuals<br> and will be asked to make a decision on
-                    what
-                    you think the model will predict for them. <br> You will not see explanations.<br>
+                    As a <b>final task</b>, you will see new individuals<br> and will be asked to <b>predict what the model would choose for them</b>. <br>No explanations will be shown.<br>
                 </p>
             </Step>
         </Stepper>
