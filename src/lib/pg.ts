@@ -1,15 +1,55 @@
 import postgres from 'postgres';
 import type {JSONValue} from 'postgres';
 
+// Try to load dotenv if available and if environment variables aren't already set
+// This makes it work both locally and in containers
+const shouldLoadDotenv = !process.env.PUBLIC_A_B_SELECTION || 
+                        !process.env.POSTGRES_HOST ||
+                        process.env.POSTGRES_HOST === 'localhost';
 
-// import dotenv from 'dotenv';
-// dotenv.config();
-// Environment variables in server-side code
+if (shouldLoadDotenv) {
+    try {
+        // Dynamic import to avoid issues if dotenv is not available in production
+        const dotenv = await import('dotenv');
+        dotenv.config();
+        console.log('Loaded environment variables from .env file');
+    } catch (error) {
+        console.log('dotenv not available, using environment variables from container/Portainer');
+    }
+} else {
+    console.log('Using environment variables from container/Portainer (already set)');
+}
+
+// Environment variables in server-side code with fallbacks
 const POSTGRES_USER = process.env.POSTGRES_USER;
 const POSTGRES_PASSWORD = process.env.POSTGRES_PASSWORD;
 const POSTGRES_DB = process.env.POSTGRES_DB;
 const POSTGRES_HOST = process.env.POSTGRES_HOST;
-const PUBLIC_A_B_SELECTION = process.env.PUBLIC_A_B_SELECTION;
+const PUBLIC_A_B_SELECTION = process.env.PUBLIC_A_B_SELECTION || 'chat'; // fallback to 'chat'
+const STUDY_GROUP_NAME = process.env.STUDY_GROUP_NAME
+
+// Validate critical environment variables
+const requiredEnvVars = {
+    POSTGRES_USER,
+    POSTGRES_PASSWORD,
+    POSTGRES_DB,
+    POSTGRES_HOST,
+    PUBLIC_A_B_SELECTION
+};
+
+for (const [key, value] of Object.entries(requiredEnvVars)) {
+    if (!value) {
+        console.error(`Missing required environment variable: ${key}`);
+    }
+}
+
+console.log('Environment variables loaded:', {
+    POSTGRES_HOST,
+    POSTGRES_DB,
+    PUBLIC_A_B_SELECTION,
+    STUDY_GROUP_NAME,
+    NODE_ENV: process.env.NODE_ENV
+});
 
 const sql = postgres({
     host: POSTGRES_HOST,
@@ -27,8 +67,23 @@ export async function setupUserProfile(userId: string, profileData: object) {
 
 export async function get_study_group() {
     try {
+        console.log('Environment debug in get_study_group:', {
+            NODE_ENV: process.env.NODE_ENV,
+            PUBLIC_A_B_SELECTION: PUBLIC_A_B_SELECTION,
+            POSTGRES_HOST: POSTGRES_HOST,
+            all_public_env: Object.keys(process.env).filter(key => key.includes('PUBLIC')),
+            all_postgres_env: Object.keys(process.env).filter(key => key.includes('POSTGRES'))
+        });
+        
+        // If PUBLIC_A_B_SELECTION is undefined or null, fallback to 'chat'
+        if (!PUBLIC_A_B_SELECTION || PUBLIC_A_B_SELECTION === 'undefined' || PUBLIC_A_B_SELECTION === 'null') {
+            console.log('PUBLIC_A_B_SELECTION not set properly, falling back to "chat"');
+            return 'chat';
+        }
+        
         // Directly return based on PUBLIC_A_B_SELECTION if not 'alternate'
         if (PUBLIC_A_B_SELECTION !== 'alternate') {
+            console.log('Returning study group:', PUBLIC_A_B_SELECTION);
             return PUBLIC_A_B_SELECTION;
         }  else if (PUBLIC_A_B_SELECTION === 'alternate') {
             // Proceed with original logic for 'alternate'
@@ -52,10 +107,15 @@ export async function get_study_group() {
         }
     } catch (error) {
         console.error('Error in get_study_group:', error);
-        throw error; // or handle error as needed
+        console.log('Falling back to "chat" due to error');
+        return 'chat'; // Safe fallback instead of throwing
     }
 }
 
+export async function get_study_group_name() {
+    // Return the custom study group name if set, otherwise return the functional study group
+    return STUDY_GROUP_NAME || await get_study_group();
+}
 
 export async function getTwoAttentionChecksFailed(userId: string): Promise<boolean> {
     const result = await sql`
