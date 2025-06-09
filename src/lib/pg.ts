@@ -25,7 +25,7 @@ const POSTGRES_USER = process.env.POSTGRES_USER;
 const POSTGRES_PASSWORD = process.env.POSTGRES_PASSWORD;
 const POSTGRES_DB = process.env.POSTGRES_DB;
 const POSTGRES_HOST = process.env.POSTGRES_HOST;
-const PUBLIC_A_B_SELECTION = process.env.PUBLIC_A_B_SELECTION || 'chat'; // fallback to 'chat'
+const PUBLIC_A_B_SELECTION = process.env.PUBLIC_A_B_SELECTION;
 const STUDY_GROUP_NAME = process.env.STUDY_GROUP_NAME
 
 // Validate critical environment variables
@@ -67,17 +67,8 @@ export async function setupUserProfile(userId: string, profileData: object) {
 
 export async function get_study_group() {
     try {
-        console.log('Environment debug in get_study_group:', {
-            NODE_ENV: process.env.NODE_ENV,
-            PUBLIC_A_B_SELECTION: PUBLIC_A_B_SELECTION,
-            POSTGRES_HOST: POSTGRES_HOST,
-            all_public_env: Object.keys(process.env).filter(key => key.includes('PUBLIC')),
-            all_postgres_env: Object.keys(process.env).filter(key => key.includes('POSTGRES'))
-        });
-        
         // If PUBLIC_A_B_SELECTION is undefined or null, fallback to 'chat'
         if (!PUBLIC_A_B_SELECTION || PUBLIC_A_B_SELECTION === 'undefined' || PUBLIC_A_B_SELECTION === 'null') {
-            console.log('PUBLIC_A_B_SELECTION not set properly, falling back to "chat"');
             return 'chat';
         }
         
