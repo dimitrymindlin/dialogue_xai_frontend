@@ -74,7 +74,6 @@ export async function get_study_group() {
         
         // Directly return based on PUBLIC_A_B_SELECTION if not 'alternate'
         if (PUBLIC_A_B_SELECTION !== 'alternate') {
-            console.log('Returning study group:', PUBLIC_A_B_SELECTION);
             return PUBLIC_A_B_SELECTION;
         }  else if (PUBLIC_A_B_SELECTION === 'alternate') {
             // Proceed with original logic for 'alternate'
