@@ -12,22 +12,22 @@
         body = body.filter(row => row[0] !== 'prediction_probability');
     }
 
-    // Normalize a string by removing spaces and converting to lower case for comparison
-    function normalizeString(str: string): string {
+    // Normalize feature_names for comparison (keep lowercase for sorting comparison)
+    function normalizeForComparison(str: string): string {
         return str.replace(/\s+/g, '').toLowerCase();
     }
 
     // Normalize feature_names for comparison
     let normalizedFeatureNames = feature_names.map(f => ({
         original: f,
-        normalized: normalizeString(f.feature_name)
+        normalized: normalizeForComparison(f.feature_name)
     }));
 
     // Sort body according to normalizedFeatureNames
     let sortedBody = [];
     $: {
         sortedBody = normalizedFeatureNames.reduce((acc, feature) => {
-            const bodyRow = body.find(row => normalizeString(row[0]) === feature.normalized);
+            const bodyRow = body.find(row => normalizeForComparison(row[0]) === feature.normalized);
             if (bodyRow) {
                 acc.push(bodyRow);
             }
@@ -54,8 +54,8 @@
             <tr class="{row[1].includes('Current:') ? 'highlighted' : ''}">
                 <td>
                     <span>{row[0]}</span>
-                    {#if feature_tooltips[row[0].toLowerCase()]}
-                        <TooltipIcon class="tooltipIcon" message={feature_tooltips[row[0].toLowerCase()]}/>
+                    {#if feature_tooltips[row[0]]}
+                        <TooltipIcon class="tooltipIcon" message={feature_tooltips[row[0]]}/>
                     {/if}
                 </td>
                 <td>
@@ -65,8 +65,8 @@
                     {:else}
                         <span>{row[1]}</span>
                     {/if}
-                    {#if feature_units[row[0].toLowerCase()]}
-                        <span> {feature_units[row[0].toLowerCase()]}</span>
+                    {#if feature_units[row[0]] && feature_units[row[0]].trim() !== ""}
+                        <span> {feature_units[row[0]]}</span>
                     {/if}
                 </td>
             </tr>
