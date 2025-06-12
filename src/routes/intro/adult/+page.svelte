@@ -20,7 +20,7 @@
     let xai_studies_participation = "";
     let prolific_id = "";
     let consent_given: boolean = false;
-    let pdfPath = `${base}/Adult-Consent.pdf`;
+    let pdfPath = `${base}/Consent.pdf`;
     let step1_gif_path = `${base}/intro-test.gif`;
     let step2_gif_path_static = `${base}/learning-teaching-static.gif`;
     let step2_gif_path_interactive = `${base}/learning-teaching-interactive.gif`;
