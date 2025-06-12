@@ -5,18 +5,20 @@
     import SubmitButton from '$lib/components/SubmitButton.svelte';
     import '../../../global.css';
     import {onMount} from 'svelte';
-    import {userId, studyGroup} from '$lib/shared.ts';
+    import {userId, studyGroup, userMLKnowledge} from '$lib/shared.ts';
     import Spinner from '$lib/components/Spinner.svelte';
     import {logAttentionCheck} from '$lib/attentioncheck.ts';
 
     let user_id;
     let study_group;
+    let user_ml_knowledge;
 
     let isLoading = false;
 
     onMount(async () => {
         user_id = await userId.get();
         study_group = await studyGroup.get();
+        user_ml_knowledge = await userMLKnowledge.get();
     });
 
 
@@ -26,7 +28,8 @@
         "Guess whether the machine learning model predicts the individual as young or old.",
         "Describe, which machine learning model is used to make the predictions.",
         "Guess, whether the machine learning model would predict the individual as having diabetes or not.",
-        "Describe how the individual can adap their lifestyle to become healthy."];
+        "Describe how the individual can adapt their lifestyle to become healthy."
+    ];
     const correct_statement = "Guess, whether the machine learning model would predict the individual as having diabetes or not.";
     const attention_check_counter = "1";
     let attention_check_tries = 0;
@@ -38,7 +41,7 @@
             isLoading = true;
             logAttentionCheck(user_id, attention_check_counter, selected_statement, correct_statement);
             // Use correct function or method for redirection
-            await goto(`${base}/experiment?user_id=${user_id}&sg=${study_group}`);
+            await goto(`${base}/experiment?user_id=${user_id}&sg=${study_group}&user_ml_knowledge=${user_ml_knowledge}`);
             isLoading = false;
             return; // Prevent further execution
         }
@@ -53,7 +56,7 @@
             logAttentionCheck(user_id, attention_check_counter, selected_statement, correct_statement);
             await alert("ATTENTION: You have selected the wrong answer twice. We ask you to return the study. Please close the survey and click " +
                 "'Stop Without Completing' on Prolific."); // Asking to return
-            await goto(`${base}/experiment?user_id=${user_id}&sg=${study_group}`); // Proceeding
+            await goto(`${base}/experiment?user_id=${user_id}&sg=${study_group}&user_ml_knowledge=${user_ml_knowledge}`); // Proceeding
             isLoading = false;
         }
     }
@@ -62,18 +65,17 @@
 <div class="modal">
     <h2>This experiment has three parts as described before. In the learning part, you'll try to guess what the machine
         learning model will predict. After guessing, you'll see the model's actual prediction and get explanations to
-        understand its reasoning. In the testing parts, you'll make similar guesses without seeing the model's
-        reasoning,
-        using what you learned earlier. Your guesses are about if the machine learning model predicts that an individual
-        is a low or high risk loan applicant. You'll go through several rounds of this process to
-        better grasp how the model makes predictions about different people's earnings.</h2>
+        understand its reasoning. In the testing part, you'll make similar guesses without seeing the model's
+        reasoning, using what you learned earlier. Your guesses are about if the machine learning model predicts that an individual
+        has diabetes or not. You'll go through several rounds of this process to
+        better grasp how the model makes predictions about different people's health conditions.</h2>
     <br>
     {#if isLoading}
         <Spinner dark_background={false}/>
     {/if}
-    <p>Based on the task description you read above, when you see a profile of an applicant, what will you be asked to
+    <p>Based on the task description you read above, when you see a profile of an individual, what will you be asked to
         do?</p>
-    <p><i>Pleas re-read the instructions if you are not sure. You will have two tries to get this question
+    <p><i>Please re-read the instructions if you are not sure. You will have two opportunities to get this question
         correct.</i></p>
     <select bind:value={selected_statement} class="select">
         <option value="" disabled selected>Select the correct statement</option>

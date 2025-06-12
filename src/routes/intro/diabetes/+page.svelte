@@ -15,16 +15,20 @@
     let education_field: string;
     let education_field_other: string;
     let english_speaking_level: string;
-    let fam_ml_val: number;
+    let fam_ml_val = -1;
     let fam_domain_val: number;
-    let prolific_id: string;
+    let ml_studies_participation = "";
+    let xai_studies_participation = "";
+    let prolific_id = "";
     let consent_given: boolean = false;
     let pdfPath = `${base}/Consent.pdf`;
-    let step1_gif_path = `${base}/intro-test.gif`;
-    let step2_gif_path_static = `${base}/learning-teaching-static.gif`;
-    let step2_gif_path_interactive = `${base}/learning-teaching-interactive.gif`;
-    let step3_gif_path = `${base}/learning-testing.gif`;
-    let step4_gif_path = `${base}/final-test.gif`;
+    let diabetes_datapoint_path = `${base}/diabetes_intro/diabetes_datapoint.png`;
+    let step1_gif_path = `${base}/diabetes_intro/intro_test.gif`;
+    let step2_gif_path_static = `${base}/diabetes_intro/learning-teaching-static.gif`;
+    let step2_gif_path_interactive = `${base}/diabetes_intro/learning-teaching-interactive.gif`;
+    let step2_gif_path_chat = `${base}/diabetes_intro/learning-teaching-chat.gif`;
+    let step3_gif_path = `${base}/diabetes_intro/learning-testing.gif`;
+    let step4_gif_path = `${base}/diabetes_intro/final_test.gif`;
     const experiment_start = new Date().toISOString();
 
     let user_id;
@@ -43,11 +47,11 @@
                 });
             } else {
                 console.error('Server responded with non-OK status');
-                study_group = 'static';
+                study_group = 'chat';
             }
         }).catch((error) => {
             console.error('Error:', error);
-            study_group.set('static');
+            study_group = 'chat';
         });
 
         user_id = await userId.get();
@@ -57,17 +61,9 @@
         // First check if all the fields are filled out
         const checks = [
             {condition: prolific_id === '', message: 'Please insert your prolific id before proceeding.'},
-            {condition: degree === '', message: 'Please select your highest degree before proceeding.'},
-            {
-                condition: education_field === '',
-                message: 'Please select your field of study before proceeding.'
-            },
-            {
-                condition: education_field === 'other' && education_field_other === '',
-                message: 'Please enter your field of study before proceeding.'
-            },
-            {condition: age === '', message: 'Please enter your age before proceeding.'},
-            {condition: gender === '', message: 'Please select your gender degree before proceeding.'}
+            {condition: fam_ml_val === -1, message: 'Please rate your familiarity with AI.'},
+            {condition: ml_studies_participation === '', message: 'Please indicate your participation in machine learning studies.'},
+            {condition: xai_studies_participation === '', message: 'Please indicate your participation in explainable AI studies.'},
         ];
 
         for (let check of checks) {
@@ -86,6 +82,8 @@
             education_field_other: education_field_other,
             fam_ml_val: fam_ml_val,
             fam_domain_val: fam_domain_val,
+            ml_studies_participation: ml_studies_participation,
+            xai_studies_participation: xai_studies_participation,
             english_speaking_level: english_speaking_level,
             experiment_start: experiment_start
         };
@@ -102,15 +100,18 @@
                 prolific_id: prolific_id
             })
         });
-        goto(`${base}/attentioncheck/diabetes?user_id=${user_id}&sg=${study_group}`);
+        goto(`${base}/attentioncheck/diabetes?user_id=${user_id}&sg=${study_group}&ml_knowledge=${fam_ml_val}`);
         //goto(`${base}/experiment?user_id=${user_id}&sg=${study_group}`);
     }
 
     let study_group_interactive_text =
         'in an <b>interactive chatbot</b>.';
 
+    let study_group_chat_text =
+        'in a <b>chatbot</b>.';
+
     let study_group_static_text =
-        'in an <b>explanation report</b>.';
+        'in an <b>explanation report</b>';
 </script>
 
 <div class="col-start-2 col-end-2 space-y-4 p-2 sm:p-2 md:space-y-6">
@@ -119,9 +120,8 @@
     <Stepper buttonCompleteLabel="Start Experiment" on:complete={onComplete}>
         <Step>
             <p>
-                This is a study on <b>understanding the decision process of Artificial Intelligence (AI) models</b>
-                which takes about 30 minutes. <br> It is designed as part of a large research project
-                that seeks to improve understanding between AI Systems (i.e. Machine Learning models) and humans.<br/>
+                Welcome! This study takes about 35 minutes and helps us learn how people understand AI decisions.
+                You'll explore how AI makes predictions about diabetes and uncover its reasoning. No prior knowledge is needed—just curiosity!
             </p>
 
             <p class="m my-12">
@@ -134,7 +134,7 @@
         </Step>
         <Step locked={!consent_given}>
             <p>
-                Please read the consent form and agree to participate in the study.
+                Before we begin, please review the consent form and confirm that you'd like to participate.
             </p>
             <iframe title="Consent Form" src={pdfPath} width="100%" height="500vh">
                 This browser does not support PDFs. Please download the PDF to view it.
@@ -159,8 +159,7 @@
         <Step>
             <h2 class="text-2xl">Your Experiment ID</h2>
             <p>
-                Please <b>keep your experiment ID</b> for future reference. <br>
-                You will need it to request deletion of your data from the study if you wish.
+                Your <b>Experiment ID is important</b>! Save it in case you ever want to remove your data from the study.
                 <br><br>
                 {user_id}
                 <br><br>
@@ -172,33 +171,37 @@
         </Step>
         <Step>
             <h2 class="text-2xl">
-                Experiment topic: Understanding AI predictions for disease predictions
+                Experiment topic: Understanding AI predictions about diabetes risk
             </h2>
             <p>
-                Have you ever considered the impact of AI and Machine Learning in the medical sector,
-                particularly in <b>predicting whether an individual has diabetes</b>? This is where the world of
-                Machine Learning can be used to recognize patterns from past years of medical records.<br/><br/>
 
-                In this experiment, you will <b>discover why Machine Learning model's predict specific outcomes</b>.
+                Did you know that <b>AI is used to predict people's diabetes risk</b>? Doctors, researchers, and healthcare systems use AI to
+                find patterns in medical data. In this experiment, you'll explore how AI makes these predictions and
+                uncover the reasons behind its decisions.
+
+                The AI model you'll interact with was trained on <b>real medical data</b> to learn patterns that might indicate diabetes risk. Your task is to figure out how and why the AI makes
+                its choices. Ready to dive in?
             </p>
         </Step>
         <Step>
             <h2 class="text-2xl">
                 Concrete Example
             </h2>
-            <p>For example, look at the individual with the following information (attributes and their values):</p>
-            <img src="{base}/adult_datapoint.png" alt="Adult Datapoint img" style="width: 25vw;">
-            <p>
-                The trained Machine Learning can accurately <b>predict</b> whether this individual <b>has diabetes</b> or not.
+            <p>For example, look at the individual with the following medical information (attributes and their values).
+                The AI model looks at a person's health data and <b>predicts</b> whether they have <b>diabetes</b> or not. Let's explore how it does that!
             </p>
+            <img src={diabetes_datapoint_path} alt="Diabetes Datapoint img" style="width: 30vw;">
         </Step>
         <Step>
             <h2 class="text-2xl">Experiment Structure</h2>
             <div class="container">
                 <div>
-                    <h3><b style="color: dodgerblue;">Introduction Phase:</b> Using information about an individual, <b>try
-                        to guess whether they has diabetes to the best of your knowledge</b>.</h3>
-                    <img alt="Step1 gif" src={step1_gif_path} style="height: 50vh;"/>
+                    <h3><b style="color: dodgerblue;">Introduction Phase:</b></h3>
+                    <ol>
+                        <li>1. <b>Observe:</b> Look at the person's medical information.</li>
+                        <li>2. <b>Make a Guess:</b> Use your intuition to decide whether the individual <b>has diabetes</b> or not.</li>
+                    </ol>
+                    <img alt="Step1 gif" src={step1_gif_path} style="height: 50vh; width: 40vw;"/>
                 </div>
             </div>
         </Step>
@@ -206,53 +209,66 @@
             <!-- Learning Phase -->
             <h2 class="text-2xl">Experiment Structure</h2>
             <div class="container">
-                <h3><b style="color: green;">Teaching Phase - Learning Step:</b> After your guess,</h3>
-                <p>you can see the Machine Learning model's prediction and get explanations for the prediction.</p>
+                <h3><b style="color: green;">Learning Phase:</b></h3>
+                <ol>
+                    <li>1. <b>Make a Guess:</b> Look at another person's medical information and make a prediction.
+                    </li>
+                    <li>2. <b>See what the AI thinks:</b> Check the AI's prediction.</li>
+                    <li>3. <b>Ask Why:</b> You can explore why the AI made that decision by asking questions.
+                    </li>
+                    <li>4. <b>Proceed:</b> Once you're ready, move on by clicking <b>Proceed</b>.
+                    </li>
+                </ol>
                 {#if study_group === 'interactive'}
-                    {@html study_group_interactive_text}
-                    <img alt="Step2 gif" src={step2_gif_path_interactive} style="height: 50vh;"/>
+                    <img alt="Step2 gif" src={step2_gif_path_interactive} style="height: 50vh; width: 40vw;"/>
+                {:else if study_group === 'chat'}
+                    <img alt="Step2 gif" src={step2_gif_path_chat} style="height: 50vh; width: 40vw;"/>
                 {:else}
-                    {@html study_group_static_text}
-                    <img alt="Step2 gif" src={step2_gif_path_static} style="height: 50vh;"/>
+                    <img alt="Step2 gif" src={step2_gif_path_static} style="height: 50vh; width: 40vw;"/>
                 {/if}
-                <p>When you feel that you understand the reason for the model's decision, continue by clicking <b>Proceed</b>.
-                </p>
             </div>
         </Step>
         <Step>
             <!-- Testing Phase -->
             <h2 class="text-2xl">Experiment Structure</h2>
             <div class="container">
-                <h3><b style="color: purple;">Teaching Phase -Testing Step:</b> Guess the model prediction for a <b>similar
-                    individual</b> as seen before.</h3>
-                <p>For this <b>new individual, you will not receive the model's prediction or explanations</b>.</p>
-                <img alt="Step3 gif" src={step3_gif_path} style="height: 50vh;"/>
-                <p>You will repeat this "learning - testing" cycle in the teaching phase for a total of <b>{PUBLIC_TEACH_TEST_CYCLES}</b>
-                    times.</p>
+                <h3><b style="color: purple;">Testing Phase:</b></h3>
+                <ol>
+                    <li>1. <b>Predict:</b> Can you guess what the AI would say for a <b>similar person</b>?
+                    </li>
+                    <li>2. <b>This time, no help:</b> You won't see the AI's answer—just your own judgment!
+                    </li>
+                    <li>3. <b>Do this a few times:</b> to see if you're getting better at it. (<b>{PUBLIC_TEACH_TEST_CYCLES}</b> times)
+                    </li>
+                </ol>
+                <img alt="Step3 gif" src={step3_gif_path} style="height: 50vh; width: 40vw;"/>
             </div>
         </Step>
         <Step>
             <!-- Final Testing Phase -->
             <h2 class="text-2xl">Experiment Structure</h2>
             <div class="container">
-                <h3><b style="color: dodgerblue;">Final Testing Phase</b>: As in the earlier testing step of the
-                    teaching phase,</h3>
-                <p><b>predict the model's output for a new individual</b> without access to the model's prediction or
-                    explanations.</p>
-                <img alt="Step4 gif" src={step4_gif_path} style="height: 50vh;"/>
-                <p>In this last segment, correct answers give points and participants in the <b>top 15% qualify for a
-                    bonus payment</b>.</p>
+                <h3><b style="color: dodgerblue;">Final Testing Phase</b></h3>
+                <ol>
+                    <li>1. <b>Final Round of Guessing:</b> Can you predict the AI's decision for a completely new person?
+                    </li>
+                    <li>2. <b>Explain your choice:</b> Why do you think your guess is right?</li>
+                    <li>3. <b>Earn Points:</b> Correct predictions get you closer to a reward.</li>
+                    <li>4. <b>Top performers win a bonus!:</b> If you're in the top <b>10%</b>, you'll get extra payment.
+                    </li>
+                </ol>
+                <img alt="Step4 gif" src={step4_gif_path} style="height: 50vh; width: 40vw;"/>
             </div>
         </Step>
 
         <Step>
-            <h2 class="text-2xl">General Information</h2>
-            <p>
-                <b>Attention:</b> Do not use the <b>browser's back button</b> during the experiment. This will cause the <b>experiment to
-                restart</b>.
+            <h1 class="text-2xl">
+                ⚠️ <b>Browser Back Button</b>: Avoid using the back button—it will restart the experiment! <br>
+                ⚠️ <b>No Personal Information in Chat</b>: When using the chatbot, your messages will be sent to OpenAI and your
+                personal information is not required and should not be sent. <br>
                 <br>
                 <br>
-            </p>
+            </h1>
         </Step>
         <Step>
             <h2 class="text-2xl">Your Information</h2>
@@ -267,17 +283,35 @@
                     <input id="prolific_id" class="input w-32 py-1" bind:value={prolific_id}/>
                 </label>
                 <label for="familiarityML" class="label text-center">
-                    <span>Rate your level of familiarity with artificial intelligence (AI):</span>
+                    <span>How much do you know about AI? Choose the option that best describes you:</span>
                     <select bind:value={fam_ml_val} class="select py-1">
                         <option value="" selected>- Select -</option>
-                        <option value="0">Very low: I have little to no understanding of AI.</option>
-                        <option value="1">Low: I have basic knowledge but limited understanding of AI concepts.
+                        <option value="very low">Very low: I have little to no understanding of AI.</option>
+                        <option value="low">Low: I have basic knowledge but limited understanding of AI concepts.
                         </option>
-                        <option value="2">Moderate: I have a fair understanding of AI concepts and its applications.
+                        <option value="moderate">Moderate: I have a fair understanding of AI concepts and its applications.
                         </option>
-                        <option value="3">High: I am knowledgeable about AI and its various applications.</option>
-                        <option value="4">Very high: I am highly in AI.</option>
+                        <option value="high">High: I am knowledgeable about AI and how it is developed.</option>
+                        <option value="very high">Very high: I am highly knowledgeable in AI and can train algorithms.</option>
                         <option value="anonymous">Prefer not to say</option>
+                    </select>
+                </label>
+                <label for="ml_studies" class="label text-center">
+                    <span>Have you participated in machine learning studies before?</span>
+                    <select bind:value={ml_studies_participation} class="select py-1">
+                        <option value="" selected>- Select -</option>
+                        <option value="never">Never</option>
+                        <option value="a few times">A few times</option>
+                        <option value="regularly">Regularly</option>
+                    </select>
+                </label>
+                <label for="xai_studies" class="label text-center">
+                    <span>Have you participated in explainable AI studies before?</span>
+                    <select bind:value={xai_studies_participation} class="select py-1">
+                        <option value="" selected>- Select -</option>
+                        <option value="never">Never</option>
+                        <option value="a few times">A few times</option>
+                        <option value="regularly">Regularly</option>
                     </select>
                 </label>
             </div>
