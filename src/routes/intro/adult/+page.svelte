@@ -2,7 +2,7 @@
     import {goto} from '$app/navigation';
     import {base} from '$app/paths';
     import {Step, Stepper} from '@skeletonlabs/skeleton';
-    import {onMount} from 'svelte
+    import {onMount} from 'svelte';
     import { env } from '$env/dynamic/public';
     const PUBLIC_TEACH_TEST_CYCLES = env.PUBLIC_TEACH_TEST_CYCLES;
 
