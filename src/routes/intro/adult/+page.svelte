@@ -2,8 +2,7 @@
     import {goto} from '$app/navigation';
     import {base} from '$app/paths';
     import {Step, Stepper} from '@skeletonlabs/skeleton';
-    import {onMount} from 'svelte';
-    import {userId} from "$lib/shared";
+    import {onMount} from 'svelte
     import { env } from '$env/dynamic/public';
     const PUBLIC_TEACH_TEST_CYCLES = env.PUBLIC_TEACH_TEST_CYCLES;
 
@@ -21,12 +20,13 @@
     let prolific_id = "";
     let consent_given: boolean = false;
     let pdfPath = `${base}/Consent.pdf`;
-    let step1_gif_path = `${base}/intro-test.gif`;
-    let step2_gif_path_static = `${base}/learning-teaching-static.gif`;
-    let step2_gif_path_interactive = `${base}/learning-teaching-interactive.gif`;
-    let step2_gif_path_chat = `${base}/learning-teaching-chat.gif`;
-    let step3_gif_path = `${base}/learning-testing.gif`;
-    let step4_gif_path = `${base}/final-test.gif`;
+    let adult_datapoint_path = `${base}/adult_intro/adult_datapoint.png`;
+    let step1_gif_path = `${base}/adult_intro/intro-test.gif`;
+    let step2_gif_path_static = `${base}/adult_intro/learning-teaching-static.gif`;
+    let step2_gif_path_interactive = `${base}/adult_intro/learning-teaching-interactive.gif`;
+    let step2_gif_path_chat = `${base}/adult_intro/learning-teaching-chat.gif`;
+    let step3_gif_path = `${base}/adult_intro/learning-testing.gif`;
+    let step4_gif_path = `${base}/adult_intro/final-test.gif`;
     const experiment_start = new Date().toISOString();
 
     let user_id;
@@ -118,7 +118,7 @@
     <Stepper buttonCompleteLabel="Start Experiment" on:complete={onComplete}>
         <Step>
             <p>
-                Welcome! This study takes about 30 minutes and helps us learn how people understand AI decisions.
+                Welcome! This study takes about 35 minutes and helps us learn how people understand AI decisions.
                 You’ll explore how AI makes predictions and uncover its reasoning. No prior knowledge is needed—just curiosity!
             </p>
 
