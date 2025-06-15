@@ -1,5 +1,6 @@
 import {goto} from '$app/navigation';
 import {base} from '$app/paths';
+import {browser} from '$app/environment';
 
 export const userId = {
     get: getUserIdOnPage,
@@ -17,6 +18,7 @@ export const userMLKnowledge = {
 };
 
 function getUserIdOnPage(): string | null {
+    if (!browser) return null;
     const user_id = window.localStorage.getItem('user_id');
     if (user_id == null) {
         goto(base + '/');
@@ -25,10 +27,12 @@ function getUserIdOnPage(): string | null {
 }
 
 function setUserIdOnPage(id: string): void {
+    if (!browser) return;
     window.localStorage.setItem('user_id', id);
 }
 
 function getStudyGroupFromUrl(): string | null {
+    if (!browser) return null;
     const urlParams = new URLSearchParams(window.location.search);
     const sg = urlParams.get('sg');
     if (sg == null) {
@@ -39,6 +43,7 @@ function getStudyGroupFromUrl(): string | null {
 }
 
 function setStudyGroupInUrl(sg: string): void {
+    if (!browser) return;
     const urlParams = new URLSearchParams(window.location.search);
     urlParams.set('sg', sg);
     // Update the URL without reloading the page
@@ -46,6 +51,7 @@ function setStudyGroupInUrl(sg: string): void {
 }
 
 function getUserMLKnowledgeFromUrl(): string | null {
+    if (!browser) return null;
     const urlParams = new URLSearchParams(window.location.search);
     const knowledge = urlParams.get('ml_knowledge');
     if (knowledge == null) {
@@ -56,6 +62,7 @@ function getUserMLKnowledgeFromUrl(): string | null {
 }
 
 function setUserMLKnowledgeInUrl(knowledge: string): void {
+    if (!browser) return;
     const urlParams = new URLSearchParams(window.location.search);
     urlParams.set('ml_knowledge', knowledge);
     // Update the URL without reloading the page
