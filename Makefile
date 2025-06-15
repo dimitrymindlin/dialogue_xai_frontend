@@ -1,4 +1,4 @@
-.PHONY: up build clean_db
+.PHONY: up build clean_db package
 
 MAKEFLAGS += --silent
 NODE_PACKAGE_MANAGER := npm
@@ -35,3 +35,7 @@ stop:
 
 clean_db:
 	docker compose down -v
+
+package:
+	xattr -rc .
+	tar --exclude='.DS_Store' --exclude='.env*' -cvf dialogue_xai_frontend.tar .
