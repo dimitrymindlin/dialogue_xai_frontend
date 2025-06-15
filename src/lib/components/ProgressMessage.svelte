@@ -1,7 +1,6 @@
 <script lang="ts">
     import {onMount, onDestroy} from 'svelte';
     import {typewriter} from '$lib/typewriter';
-    import LoadingCircle from '$lib/components/LoadingCircle.svelte';
 
     // Define the list of progress labels.
     const states = ['...'];
@@ -26,7 +25,7 @@
             // Set the container content to the current progress state.
             container.innerHTML = currentState;
             // Run the typewriter effect on the container.
-            typewriterAction = typewriter(container, 80);
+            typewriterAction = typewriter(container, 5);
         }
     }
 

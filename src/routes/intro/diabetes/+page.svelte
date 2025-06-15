@@ -4,6 +4,7 @@
     import {Step, Stepper} from '@skeletonlabs/skeleton';
     import {onMount} from 'svelte';
     import { env } from '$env/dynamic/public';
+    import ToggleableGif from '$lib/components/ToggleableGif.svelte';
 
     const PUBLIC_TEACH_TEST_CYCLES = env.PUBLIC_TEACH_TEST_CYCLES;
     import {userId} from "$lib/shared";
@@ -190,7 +191,7 @@
             <p>For example, look at the individual with the following medical information (attributes and their values).
                 The AI model looks at a person's health data and <b>predicts</b> whether they have <b>diabetes</b> or not. Let's explore how it does that!
             </p>
-            <img src={diabetes_datapoint_path} alt="Diabetes Datapoint img" style="width: 30vw;">
+            <img src={diabetes_datapoint_path} alt="Diabetes Datapoint img" style="width: 20vw;">
         </Step>
         <Step>
             <h2 class="text-2xl">Experiment Structure</h2>
@@ -201,7 +202,7 @@
                         <li>1. <b>Observe:</b> Look at the person's medical information.</li>
                         <li>2. <b>Make a Guess:</b> Use your intuition to decide whether the individual <b>has diabetes</b> or not.</li>
                     </ol>
-                    <img alt="Step1 gif" src={step1_gif_path} style="height: 50vh; width: 40vw;"/>
+                    <ToggleableGif alt="Step1 gif" src={step1_gif_path} smallSize="35vw" largeSize="100vw" />
                 </div>
             </div>
         </Step>
@@ -220,11 +221,11 @@
                     </li>
                 </ol>
                 {#if study_group === 'interactive'}
-                    <img alt="Step2 gif" src={step2_gif_path_interactive} style="height: 50vh; width: 40vw;"/>
+                    <ToggleableGif alt="Step2 gif" src={step2_gif_path_interactive} smallSize="35vw" largeSize="100vw" />
                 {:else if study_group === 'chat'}
-                    <img alt="Step2 gif" src={step2_gif_path_chat} style="height: 50vh; width: 40vw;"/>
+                    <ToggleableGif alt="Step2 gif" src={step2_gif_path_chat} smallSize="35vw" largeSize="100vw" />
                 {:else}
-                    <img alt="Step2 gif" src={step2_gif_path_static} style="height: 50vh; width: 40vw;"/>
+                    <ToggleableGif alt="Step2 gif" src={step2_gif_path_static} smallSize="35vw" largeSize="100vw" />
                 {/if}
             </div>
         </Step>
@@ -241,7 +242,7 @@
                     <li>3. <b>Do this a few times:</b> to see if you're getting better at it. (<b>{PUBLIC_TEACH_TEST_CYCLES}</b> times)
                     </li>
                 </ol>
-                <img alt="Step3 gif" src={step3_gif_path} style="height: 50vh; width: 40vw;"/>
+                <ToggleableGif alt="Step3 gif" src={step3_gif_path} smallSize="35vw" largeSize="100vw" />
             </div>
         </Step>
         <Step>
@@ -257,7 +258,7 @@
                     <li>4. <b>Top performers win a bonus!:</b> If you're in the top <b>10%</b>, you'll get extra payment.
                     </li>
                 </ol>
-                <img alt="Step4 gif" src={step4_gif_path} style="height: 50vh; width: 40vw;"/>
+                <ToggleableGif alt="Step4 gif" src={step4_gif_path} smallSize="35vw" largeSize="100vw" />
             </div>
         </Step>
 

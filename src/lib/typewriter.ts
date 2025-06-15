@@ -1,6 +1,6 @@
 // typewriter.ts
 
-export function typewriter(node: HTMLElement, initialSpeed = 20): {
+export function typewriter(node: HTMLElement, initialSpeed = 5): {
   update: (newSpeed: number) => void;
   destroy: () => void;
 } {
