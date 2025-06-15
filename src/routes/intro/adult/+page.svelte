@@ -4,6 +4,7 @@
     import {Step, Stepper} from '@skeletonlabs/skeleton';
     import {onMount} from 'svelte';
     import { env } from '$env/dynamic/public';
+    import {userId} from '$lib/shared';
     const PUBLIC_TEACH_TEST_CYCLES = env.PUBLIC_TEACH_TEST_CYCLES;
 
     let gender: string;
@@ -49,7 +50,7 @@
             }
         }).catch((error) => {
             console.error('Error:', error);
-            study_group.set('chat');
+            study_group = 'chat';
         });
 
         user_id = await userId.get();
@@ -190,7 +191,7 @@
                 The AI model looks at a person’s information and <b>predicts</b> whether they earn <b>more or less than $50K</b> per
                 year. Let’s explore how it does that!
             </p>
-            <img src="{base}/adult_datapoint.png" alt="Adult Datapoint img" style="width: 25vw;">
+            <img src={adult_datapoint_path} alt="Adult Datapoint img" style="width: 25vw;">
         </Step>
         <Step>
             <h2 class="text-2xl">Experiment Structure</h2>
