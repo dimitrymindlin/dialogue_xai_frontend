@@ -391,6 +391,9 @@ let experiment_phase: TTestOrTeaching = CONFIG.introPoints > 0 ? 'intro-test' : 
             current_prediction = result.current_prediction;
             static_report = result.static_report;
             new_datapoint = result;
+            
+            // Add 2.5 second delay before displaying the teaching step
+            await new Promise(resolve => setTimeout(resolve, 2500));
         } else {
             ({current_prediction, ...new_datapoint} = await (
                 await backend.xai(user_id)[endpoint](datapoint_count)
