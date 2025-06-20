@@ -6,10 +6,11 @@
         TChatMessage,
         TDatapoint,
         TQuestionResult,
-        TDatapointResult
+        TDatapointResult,
+        TFeatureName
     } from '$lib/types';
     import backend from '$lib/backend';
-    import type {PageData} from '../';
+    import type {PageData} from './$types';
     import {base} from '$app/paths';
 
     /**
@@ -29,8 +30,8 @@
     let feature_tooltips = data.feature_tooltips;
     let feature_units = data.feature_units;
     let prediction_probability = data.prediction_probability;
-    let true_label: string = data.datapoint.true_label;
-    let ml_label_prediction: string = data.datapoint.ml_prediction;
+    let true_label: string = String(data.datapoint.true_label);
+    let ml_label_prediction: string = String(data.datapoint.ml_prediction);
     let user_id: string = data.user_id;
     let new_datapoint: TDatapoint;
     //-----------------------------------------------------------------
@@ -39,7 +40,8 @@
      * Chat relevant
      */
     let messages: TChatMessage[] = [];
-    let initial_message = {
+    let initial_message: TChatMessage = {
+        id: "init",
         text: "The model predicts that the current datapoint is " + current_prediction + ". You can ask questions.",
         isUser: false,
         feedback: false,
@@ -48,33 +50,35 @@
 
     let feature_names = data.feature_names;
     let {feature_questions, general_questions}: TQuestionResult = data.questions;
-    delete data.datapoint.true_label;
 
-    function get_feature_id_from_name(featureName, feature_names) {
+    function get_feature_id_from_name(featureName: string, feature_names: TFeatureName[]) {
         // Normalize the feature name by removing spaces and converting to lower case
         const normalizedFeatureName = featureName.replace(/\s+/g, '').toLowerCase();
 
         // Find the feature in the array, normalizing the feature_name in the same way
-        const foundFeature = feature_names.find(f => f.feature_name.replace(/\s+/g, '').toLowerCase() === normalizedFeatureName);
+        const foundFeature = feature_names.find((f: TFeatureName) => 
+            f.feature_name.replace(/\s+/g, '').toLowerCase() === normalizedFeatureName
+        );
 
         // Return the id or null if not found
-        return foundFeature ? foundFeature.id : null;
+        return foundFeature ? foundFeature.feature_id : null;
     }
 
     function createAndPushMessage(text: string,
                                   isUser: boolean,
                                   feedback: boolean,
-                                  question_id: number,
+                                  question_id: string | number,
                                   feature_id?: number,
                                   followup?: []) {
-        messages.push(<TChatMessage>{
+        messages.push({
+            id: Date.now(),
             text: text,
             isUser: isUser,
             feedback: feedback,
-            question_id: question_id,
+            question_id: String(question_id),
             feature_id: feature_id,
             followup: followup
-        });
+        } as TChatMessage);
     }
 
     async function submitQuestion(e: any) {
@@ -84,8 +88,8 @@
         let question: string = e.detail.question;
 
         // Get correct question id and feature id
-        let generalQuestion = general_questions.find(q => q.q_id === questionId);
-        let featureQuestion = feature_questions.find(q => q.q_id === questionId);
+        let generalQuestion = general_questions.find(q => q.question_id === questionId);
+        let featureQuestion = feature_questions.find(q => q.question_id === questionId);
 
         let full_question = '';
         // Check if question is not null
@@ -137,7 +141,7 @@
 
             let responseMessage: TChatMessage;
             setTimeout(async () => {
-                await backend.xai(user_id).get_question_selection_response(questionId, feature_id)
+                await backend.xai(user_id).get_question_selection_response(questionId, feature_id || '')
                     .then(response => response.json())
                     .then(data => {
                         responseMessage = data;
@@ -150,76 +154,53 @@
         }
     }
 
-    async function submitWrittenQuestion(e: any) {
-        const user_message = e.detail.message;
-        // Set message id as timestamp but as integer
-        let message_id = parseInt((new Date().getTime() / 1000).toFixed(0));
-        createAndPushMessage(user_message, true, false, message_id);
-        messages = messages;
-        let question_id;
-        let feature_id;
-        let responseData;
-
-        // Get Response
-        setTimeout(async () => {
-            await backend.xai(user_id).get_user_message_response(user_message)
-                .then(response => response.json())
-                .then(data => {
-                    responseData = data;
-                });
-
-            // Set id of responseData
-            let message_id = parseInt((new Date().getTime() / 1000).toFixed(0));
-            responseData.id = message_id;
-            messages.push(responseData);
-            question_id = responseData.id;
-            feature_id = responseData.feature_id;
-            messages = messages;
-
-            // Log event
-            const details = {
-                datapoint_count: datapoint_count,
-                user_question: user_message,
-                message: responseData,
-                question_id: question_id,
-                feature_id: feature_id,
-            };
-            fetch(`${base}/api/log_event`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    user_id: user_id,
-                    event_source: 'teaching',
-                    event_type: 'question',
-                    details: details,
-                })
-            });
-        }, 700);
+    async function handleStreamComplete(e: any) {
+        const { message, response } = e.detail;
+        
+        // Log event
+        const details = {
+            datapoint_count: datapoint_count,
+            user_question: message,
+            message: response,
+            question_id: response.question_id,
+            feature_id: response.feature_id,
+        };
+        fetch(`${base}/api/log_event`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                user_id: user_id,
+                event_source: 'teaching',
+                event_type: 'question',
+                details: details,
+            })
+        });
     }
 
 
     function setNewCurrentDatapoint() {
         messages = [initial_message];
-        true_label = <string>new_datapoint.true_label;
-        ml_label_prediction = <string>new_datapoint.ml_prediction;
-        delete new_datapoint.true_label;
-        delete new_datapoint.ml_prediction;
-        current_datapoint = new_datapoint;
+        if (new_datapoint) {
+            true_label = String(new_datapoint.true_label);
+            ml_label_prediction = String(new_datapoint.ml_prediction);
+            // Don't delete properties from new_datapoint
+            current_datapoint = new_datapoint;
+        }
         datapoint_answer_selected = null; // Reset selected answer
     }
 
     async function handleNext(e: any) {
         // Get the next datapoint
         let result = await (await backend.xai(user_id).get_train_datapoint(datapoint_count)).json() as TDatapointResult;
-        current_datapoint = result;
+        new_datapoint = result;
         //-----------------------------------------------------------------
         datapoint_answer_selected = null;
         setNewCurrentDatapoint();
     }
 
-    function handleFeedbackButtonClick(event) {
+    function handleFeedbackButtonClick(event: any) {
         const {buttonType} = event.detail;
         const {messageId} = event.detail;
         const {user_comment} = event.detail;
@@ -242,26 +223,35 @@
             })
         });
     }
+
+    function transformDatapointForDisplay(datapoint: TDatapoint): { [key: string]: string } {
+        const transformed: { [key: string]: string } = {};
+        for (const [key, value] of Object.entries(datapoint)) {
+            if (typeof value === 'string') {
+                transformed[key] = value;
+            } else if (value && typeof value === 'object' && 'current' in value) {
+                transformed[key] = value.current;
+            }
+        }
+        return transformed;
+    }
 </script>
 
 
 <div class={"col-start-1 col-end-2"}>
     <TTMDatapoint
-            data={current_datapoint.displayable_features}
-            bind:selected_prediction={datapoint_answer_selected}
-            bind:datapoint_count
+            data={transformDatapointForDisplay(current_datapoint)}
             feature_names={feature_names}
             feature_units={feature_units}
             feature_tooltips={feature_tooltips}
             prediction_probability={prediction_probability}
-            on:next={handleNext}
     />
 </div>
 <div class="col-start-2 col-end-3 overflow-y-scroll">
 
-    <TTMChat {messages} user_input={true}
+    <TTMChat {messages} user_input={true} {user_id}
              on:feedbackButtonClick={handleFeedbackButtonClick}
-             on:submit={submitWrittenQuestion}
+             on:streamComplete={handleStreamComplete}
              on:next={handleNext}
              on:questionClick={submitQuestion}
     />
@@ -272,12 +262,15 @@
             {feature_questions}
             {general_questions}
             {current_prediction}
-            bind:selected_prediction={datapoint_answer_selected}
             feature_questions_dropdown={feature_names}
             on:submit={submitQuestion}
             on:next={handleNext}
     />
 </div>
+
+<style>
+/* Add any styles if needed */
+</style>
 
 
 

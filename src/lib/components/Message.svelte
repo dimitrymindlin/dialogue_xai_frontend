@@ -172,10 +172,10 @@
 
     // Start animation when component is mounted
     onMount(() => {
-        if (!message.isUser) {
+        if (!message.isUser && !message.isStreaming) {
             startTypingAnimation();
         } else {
-            // For user messages, just display the full text
+            // For user messages or streaming messages, just display the full text
             displayedText = message.text;
         }
 
@@ -184,6 +184,13 @@
             if (typingInterval) clearInterval(typingInterval);
         };
     });
+
+    // React to streaming updates
+    $: if (message.isStreaming) {
+        displayedText = message.text;
+        isTyping = false;
+        if (typingInterval) clearInterval(typingInterval);
+    }
 
     // Function to forward event
     function forwardEvent(event: any) {
@@ -225,21 +232,21 @@
         {#if message.isUser}
             {@html message.text}
         {:else}
-            <!-- Animate only AI responses -->
+            <!-- Animate only AI responses that are not streaming -->
             <div class="animated-text">
-                {#if isTyping}
+                {#if isTyping && !message.isStreaming}
                     {@html renderHTML(displayedText, false)}
                     <span class="typing-cursor">|</span>
                     <div class="skip-animation" on:click|stopPropagation={skipAnimation}>
                         <button class="skip-button">Skip</button>
                     </div>
                 {:else}
-                    {@html message.text}
+                    {@html displayedText || message.text}
                 {/if}
             </div>
         {/if}
         
-        {#if !message.isUser && message.feedback && !isTyping}
+        {#if !message.isUser && message.feedback && !isTyping && !message.isStreaming}
             <br/>
             <span class="float-right flex flex-wrap" on:click|stopPropagation in:fade={{ delay: 1000, duration: 250 }}>
             <span class="text-sm text-gray-600 mt-2 mr-1">Liking the response?</span>
@@ -248,7 +255,7 @@
           </span>
         {/if}
         <br/>
-        {#if message.followup && message.followup.length > 0 && !isTyping}
+        {#if message.followup && message.followup.length > 0 && !isTyping && !message.isStreaming}
             <div class="follow-up-questions">
                 <p><b>Clarification Question</b></p>
                 {#each message.followup as question}

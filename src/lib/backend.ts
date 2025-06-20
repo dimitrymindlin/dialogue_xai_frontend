@@ -33,6 +33,68 @@ export default {
             method: "POST",
             body: JSON.stringify({message})
         }),
+        get_user_message_response_stream: (message: string, onChunk: (chunk: any) => void) => {
+            return fetch(PUBLIC_BACKEND_URL + "get_response_nl" + "?user_id=" + user_id, {
+                method: "POST",
+                body: JSON.stringify({message, streaming: true})
+            }).then(async response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const reader = response.body?.getReader();
+                const decoder = new TextDecoder();
+                
+                if (!reader) {
+                    throw new Error('No reader available');
+                }
+                
+                let buffer = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        break;
+                    }
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // Process complete SSE messages
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || ''; // Keep incomplete line in buffer
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data.trim()) {
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    console.log('Stream chunk received:', parsed);
+                                    onChunk(parsed);
+                                } catch (e) {
+                                    console.error('Error parsing SSE data:', e, data);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Process any remaining data in buffer
+                if (buffer.trim() && buffer.startsWith('data: ')) {
+                    const data = buffer.slice(6);
+                    if (data.trim()) {
+                        try {
+                            const parsed = JSON.parse(data);
+                            console.log('Final stream chunk:', parsed);
+                            onChunk(parsed);
+                        } catch (e) {
+                            console.error('Error parsing final SSE data:', e, data);
+                        }
+                    }
+                }
+            });
+        },
         set_user_prediction: (experiment_phase: string, datapoint_count: number, user_prediction: string) => fetch(PUBLIC_BACKEND_URL + 'set_user_prediction', {
             method: "POST",
             headers: {'Content-Type': 'application/json'},

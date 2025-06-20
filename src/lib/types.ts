@@ -15,14 +15,17 @@ type TFeatureName = {
 };
 
 type TChatMessage = {
-    id: string;
+    id: string | number;
     text: string;
     isUser: boolean;
     feedback: boolean;
-    question_id: string;
-    feature_id: number;
-    followup: (TGeneralQuestion | TFeatureQuestion)[];
-    reasoning: string;
+    question_id?: string;
+    feature_id?: number;
+    followup?: (TGeneralQuestion | TFeatureQuestion)[];
+    reasoning?: string;
+    isStreaming?: boolean;
+    audio?: any;
+    audio_error?: string;
 };
 
 type TDatapointValueWithHistory = {
