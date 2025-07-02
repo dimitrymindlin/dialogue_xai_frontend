@@ -185,57 +185,43 @@
             // Use non-streaming API
             console.log('Sending message without streaming:', userInput);
             
-            // Create AI message placeholder immediately
-            const aiMessageId = Date.now() + 1;
-            const aiMessage: TChatMessage = {
-                id: aiMessageId,
-                text: '',
-                isUser: false,
-                feedback: true,
-                isStreaming: false
-            };
-            messages = [...messages, aiMessage];
-            
+            // Don't create AI message immediately - let ProgressMessage show
             // Make non-streaming API call
             backend.xai(user_id).get_user_message_response(userInput)
                 .then(response => response.json())
                 .then(data => {
-                    // Find the AI message to update
-                    const messageIndex = messages.findIndex(m => m.id === aiMessageId);
-                    if (messageIndex !== -1) {
-                        messages[messageIndex] = {
-                            ...messages[messageIndex],
-                            text: data.text,
-                            feedback: data.feedback !== false,
-                            followup: data.followup || [],
-                            reasoning: data.reasoning || '',
-                            question_id: data.question_id,
-                            feature_id: data.feature_id,
-                            audio: data.audio,
-                            audio_error: data.audio_error
-                        };
-                        messages = messages; // Trigger reactivity
-                        
-                        // Dispatch event for logging purposes (if parent needs it)
-                        dispatch('streamComplete', {
-                            message: userInput,
-                            response: messages[messageIndex]
-                        });
-                    }
+                    // Create AI message when response arrives
+                    const aiMessage: TChatMessage = {
+                        id: Date.now() + 1,
+                        text: data.text,
+                        isUser: false,
+                        feedback: data.feedback !== false,
+                        followup: data.followup || [],
+                        reasoning: data.reasoning || '',
+                        question_id: data.question_id,
+                        feature_id: data.feature_id,
+                        audio: data.audio,
+                        audio_error: data.audio_error
+                    };
+                    messages = [...messages, aiMessage]; // Add new message
+                    
+                    // Dispatch event for logging purposes (if parent needs it)
+                    dispatch('streamComplete', {
+                        message: userInput,
+                        response: aiMessage
+                    });
                 })
                 .catch(error => {
                     console.error('Non-streaming API error:', error);
                     
-                    // Update message with error
-                    const messageIndex = messages.findIndex(m => m.id === aiMessageId);
-                    if (messageIndex !== -1) {
-                        messages[messageIndex] = {
-                            ...messages[messageIndex],
-                            text: 'Sorry, an error occurred while processing your request.',
-                            feedback: false
-                        };
-                        messages = messages;
-                    }
+                    // Create error message
+                    const errorMessage: TChatMessage = {
+                        id: Date.now() + 1,
+                        text: 'Sorry, an error occurred while processing your request.',
+                        isUser: false,
+                        feedback: false
+                    };
+                    messages = [...messages, errorMessage];
                 });
         }
     }
@@ -397,8 +383,8 @@
             <Message {message} on:feedbackButtonClick={forwardFeedback} on:questionClick={forwardQuestionClick}/>
         {/each}
 
-        <!-- Show progress message if the last message is from the user and no AI response is streaming yet (only when streaming is enabled) -->
-        {#if STREAMING_OPTION && messages.length && messages[messages.length - 1].isUser && 
+        <!-- Show progress message if the last message is from the user and no AI response yet -->
+        {#if messages.length && messages[messages.length - 1].isUser && 
              !messages.some(m => !m.isUser && m.text && m.text.trim().length > 0)}
             <ProgressMessage/>
         {/if}
