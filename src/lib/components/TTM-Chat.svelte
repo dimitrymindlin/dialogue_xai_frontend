@@ -22,7 +22,8 @@
     let showSoundWaveOverlay = false; // New variable to control overlay visibility
 
     // Autocomplete suggestions for the chat input with substituted attributes
-    let suggestions = [
+    // TODO: Make Dataset dependent
+    let adult_suggestions = [
         "Explain this prediction to me",
         "Why under 50k?",
         "Why over 50k?",
@@ -49,7 +50,7 @@
 
     // Filter suggestions based on the input text
     $: filteredSuggestions = inputMessage.trim()
-        ? suggestions.filter(s => s.toLowerCase().includes(inputMessage.toLowerCase()))
+        ? adult_suggestions.filter(s => s.toLowerCase().includes(inputMessage.toLowerCase()))
         : [];
 
     let autoscroll = false;

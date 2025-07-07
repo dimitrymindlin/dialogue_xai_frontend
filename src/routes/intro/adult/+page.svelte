@@ -175,7 +175,7 @@
             <p>
 
                 Did you know that <b>AI is used to predict people’s income</b>? Banks, companies, and researchers use AI to
-                find patterns in financial data. In this experiment, you’ll explore how AI makes these predictions and
+                find patterns in financial data. In this experiment, you’ll explore <b>how AI makes these predictions</b> and
                 uncover the reasons behind its decisions.
 
                 The AI model you’ll interact with was trained, in other words it learned, on <b>older data—from before
@@ -188,8 +188,9 @@
                 Concrete Example
             </h2>
             <p>For example, look at the individual with the following information (attributes and their values).
-                The AI model looks at a person’s information and <b>predicts</b> whether they earn <b>more or less than $50K</b> per
-                year. Let’s explore how it does that!
+                The AI model looks at a person’s information as shown below. It learned to predict whether this person
+                earns <b>more or less than 50k a year</b> based on their attributes.
+                Let’s explore how it does that!
             </p>
             <img src={adult_datapoint_path} alt="Adult Datapoint img" style="width: 25vw;">
         </Step>
