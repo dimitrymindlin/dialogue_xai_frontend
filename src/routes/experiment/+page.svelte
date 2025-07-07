@@ -228,45 +228,29 @@ let experiment_phase: TTestOrTeaching = CONFIG.introPoints > 0 ? 'intro-test' : 
         }
     }
 
-    async function submitWrittenQuestion(e: any) {
-        const user_message = e.detail.message;
-        createAndPushMessage(user_message, true, false, "0");
-        let question_id;
-        let feature_id;
-        let responseData;
-
-        // Get Response
-        setTimeout(async () => {
-            await backend.xai(user_id).get_user_message_response(user_message)
-                .then(response => response.json())
-                .then(data => {
-                    responseData = data;
-                });
-            pushMessage(responseData);
-            question_id = responseData.question_id;
-            feature_id = responseData.feature_id;
-
-            // Log event
-            const details = {
-                datapoint_count: datapoint_count,
-                user_question: user_message,
-                message: responseData,
-                question_id: question_id,
-                feature_id: feature_id,
-            };
-            fetch(`${base}/api/log_event`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    user_id: user_id,
-                    event_source: 'teaching',
-                    event_type: 'question',
-                    details: details,
-                })
-            });
-        }, 700);
+    async function handleStreamComplete(e: any) {
+        const { message, response } = e.detail;
+        
+        // Log event
+        const details = {
+            datapoint_count: datapoint_count,
+            user_question: message,
+            message: response,
+            question_id: response.question_id,
+            feature_id: response.feature_id,
+        };
+        fetch(`${base}/api/log_event`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                user_id: user_id,
+                event_source: 'teaching',
+                event_type: 'question',
+                details: details,
+            })
+        });
     }
 
     // Helper to decide the next phase & count
@@ -309,7 +293,7 @@ let experiment_phase: TTestOrTeaching = CONFIG.introPoints > 0 ? 'intro-test' : 
     async function handleNext(e: any) {
         if (handlingNext) return;
 
-        // A. Teaching-phase “proceeding” check
+        // A. Teaching-phase "proceeding" check
         if (experiment_phase === 'teaching' && !just_used_proceeding_stop) {
             const res = await backend.xai(user_id).get_proceeding_okay();
             const {proceeding_okay, message} = await res.json() as {
@@ -519,9 +503,9 @@ let experiment_phase: TTestOrTeaching = CONFIG.introPoints > 0 ? 'intro-test' : 
                         class="col-start-2 col-end-4 overflow-y-scroll"
                         transition:fade={{ delay: 250, duration: 500 }}
                 >
-                    <TTMChat {messages} {study_group} user_input={true}
+                    <TTMChat {messages} {study_group} {user_id} user_input={true}
                              on:feedbackButtonClick={handleFeedbackButtonClick}
-                             on:submit={submitWrittenQuestion}
+                             on:streamComplete={handleStreamComplete}
                              on:next={handleNext}
                              on:questionClick={submitQuestion}
                     />
@@ -533,7 +517,6 @@ let experiment_phase: TTestOrTeaching = CONFIG.introPoints > 0 ? 'intro-test' : 
                 >
                     <TTMChat {messages} {study_group} user_input={false}
                              on:feedbackButtonClick={handleFeedbackButtonClick}
-                             on:submit={submitWrittenQuestion}
                              on:next={handleNext}
                              on:questionClick={submitQuestion}
                     />

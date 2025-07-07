@@ -7,6 +7,7 @@
     import {createEventDispatcher} from 'svelte';
     import SubmitButton from "$lib/components/SubmitButton.svelte";
     import SoundWaveOverlay from "./SoundWaveOverlay.svelte"; // Import the new overlay component
+    import backend from '$lib/backend'; // Add backend import
 
     export let messages: TChatMessage[] = [];
     let element: HTMLElement;
@@ -77,8 +78,153 @@
 
     function sendMessage() {
         if (inputMessage.trim() === '') return;
-        dispatch('submit', {message: inputMessage});
+        
+        // Create user message
+        const userMessage: TChatMessage = {
+            id: Date.now(),
+            text: inputMessage,
+            isUser: true,
+            feedback: false
+        };
+        messages = [...messages, userMessage];
+        
+        const userInput = inputMessage;
         inputMessage = '';
+        
+        if (STREAMING_OPTION) {
+            // Use streaming API
+            let aiMessageId: number | null = null;
+            let hasCreatedAiMessage = false;
+            
+            console.log('Sending message with streaming:', userInput);
+            backend.xai(user_id).get_user_message_response_stream(userInput, (chunk) => {
+                console.log('Received stream chunk:', chunk);
+                
+                // Create AI message placeholder on first chunk
+                if (!hasCreatedAiMessage) {
+                    aiMessageId = Date.now() + 1;
+                    const aiMessage: TChatMessage = {
+                        id: aiMessageId,
+                        text: '',
+                        isUser: false,
+                        feedback: true,
+                        isStreaming: true
+                    };
+                    messages = [...messages, aiMessage];
+                    hasCreatedAiMessage = true;
+                }
+                
+                // Find the AI message to update
+                const messageIndex = messages.findIndex(m => m.id === aiMessageId);
+                if (messageIndex === -1) return;
+                
+                if (chunk.type === 'partial') {
+                    // Update message text incrementally
+                    messages[messageIndex].text += chunk.content;
+                    messages[messageIndex].isStreaming = true;
+                    messages = messages; // Trigger reactivity
+                } else if (chunk.type === 'final') {
+                    // Final update with complete data
+                    messages[messageIndex] = {
+                        ...messages[messageIndex],
+                        text: chunk.content,
+                        isStreaming: false,
+                        feedback: chunk.feedback !== false,
+                        followup: chunk.followup || [],
+                        reasoning: chunk.reasoning || '',
+                        question_id: chunk.question_id,
+                        feature_id: chunk.feature_id,
+                        audio: chunk.audio,
+                        audio_error: chunk.audio_error
+                    };
+                    messages = messages; // Trigger reactivity
+                    
+                    // Dispatch event for logging purposes (if parent needs it)
+                    dispatch('streamComplete', {
+                        message: userInput,
+                        response: messages[messageIndex]
+                    });
+                } else if (chunk.type === 'error') {
+                    // Handle error
+                    messages[messageIndex] = {
+                        ...messages[messageIndex],
+                        text: chunk.content || 'An error occurred while processing your request.',
+                        isStreaming: false,
+                        feedback: false
+                    };
+                    messages = messages; // Trigger reactivity
+                }
+            }).catch(error => {
+                console.error('Stream error:', error);
+                
+                // Create AI message for error if not created yet
+                if (!hasCreatedAiMessage) {
+                    aiMessageId = Date.now() + 1;
+                    const errorMessage: TChatMessage = {
+                        id: aiMessageId,
+                        text: 'Sorry, an error occurred while processing your request.',
+                        isUser: false,
+                        feedback: false,
+                        isStreaming: false
+                    };
+                    messages = [...messages, errorMessage];
+                } else {
+                    // Update existing message with error
+                    const messageIndex = messages.findIndex(m => m.id === aiMessageId);
+                    if (messageIndex !== -1) {
+                        messages[messageIndex] = {
+                            ...messages[messageIndex],
+                            text: 'Sorry, an error occurred while processing your request.',
+                            isStreaming: false,
+                            feedback: false
+                        };
+                        messages = messages;
+                    }
+                }
+            });
+        } else {
+            // Use non-streaming API
+            console.log('Sending message without streaming:', userInput);
+            
+            // Don't create AI message immediately - let ProgressMessage show
+            // Make non-streaming API call
+            backend.xai(user_id).get_user_message_response(userInput)
+                .then(response => response.json())
+                .then(data => {
+                    // Create AI message when response arrives
+                    const aiMessage: TChatMessage = {
+                        id: Date.now() + 1,
+                        text: data.text,
+                        isUser: false,
+                        feedback: data.feedback !== false,
+                        followup: data.followup || [],
+                        reasoning: data.reasoning || '',
+                        question_id: data.question_id,
+                        feature_id: data.feature_id,
+                        audio: data.audio,
+                        audio_error: data.audio_error
+                    };
+                    messages = [...messages, aiMessage]; // Add new message
+                    
+                    // Dispatch event for logging purposes (if parent needs it)
+                    dispatch('streamComplete', {
+                        message: userInput,
+                        response: aiMessage
+                    });
+                })
+                .catch(error => {
+                    console.error('Non-streaming API error:', error);
+                    
+                    // Create error message
+                    const errorMessage: TChatMessage = {
+                        id: Date.now() + 1,
+                        text: 'Sorry, an error occurred while processing your request.',
+                        isUser: false,
+                        feedback: false
+                    };
+                    messages = [...messages, errorMessage];
+                });
+        }
     }
 
     async function next(e: any) {
@@ -222,7 +368,8 @@
     });
 
     // Add environment variable for message icon
-    const MESSAGE_ICON = import.meta.env.VITE_MESSAGE_ICON === 'true';
+    const SPEECH_RECOGNITION = import.meta.env.VITE_SPEECH_RECOGNITION === 'true';
+    const STREAMING_OPTION = import.meta.env.VITE_STREAMING_OPTION !== 'false'; // Default: true
 </script>
 
 <svelte:head>
@@ -237,8 +384,9 @@
             <Message {message} on:feedbackButtonClick={forwardFeedback} on:questionClick={forwardQuestionClick}/>
         {/each}
 
-        <!-- Conditionally render the progress message if the last message is from the user -->
-        {#if messages.length && messages[messages.length - 1].isUser}
+        <!-- Show progress message if the last message is from the user and no AI response yet -->
+        {#if messages.length && messages[messages.length - 1].isUser && 
+             !messages.some(m => !m.isUser && m.text && m.text.trim().length > 0)}
             <ProgressMessage/>
         {/if}
     </main>
@@ -266,7 +414,7 @@
                 />
             </div>
             
-            {#if MESSAGE_ICON}
+            {#if SPEECH_RECOGNITION}
                 <!-- Show only microphone and speech icons -->
                 <div class="voice-recognition-section">
                     <button 
