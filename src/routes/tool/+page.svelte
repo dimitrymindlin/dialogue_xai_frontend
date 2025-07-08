@@ -224,13 +224,20 @@
         });
     }
 
-    function transformDatapointForDisplay(datapoint: TDatapoint): { [key: string]: string } {
+    // Prepare a flat map of attribute->value, prioritizing displayable_features if provided by backend
+    function transformDatapointForDisplay(datapoint: any): { [key: string]: string } {
+        // Use nested displayable_features if present
+        const source = datapoint.displayable_features ?? datapoint;
         const transformed: { [key: string]: string } = {};
-        for (const [key, value] of Object.entries(datapoint)) {
+        for (const [key, value] of Object.entries(source)) {
             if (typeof value === 'string') {
                 transformed[key] = value;
             } else if (value && typeof value === 'object' && 'current' in value) {
-                transformed[key] = value.current;
+                // Flatten history objects
+                transformed[key] = (value as any).current;
+            } else {
+                // Fallback to JSON string
+                transformed[key] = JSON.stringify(value);
             }
         }
         return transformed;
