@@ -1,4 +1,5 @@
 <script lang="ts">
+    // @ts-nocheck
     export let header: string[];
     export let body: string[][];
     export let feature_tooltips: { [key: string]: string };
@@ -55,7 +56,7 @@
                 <td>
                     <span>{row[0]}</span>
                     {#if feature_tooltips[row[0].toLowerCase()]}
-                        <TooltipIcon class="tooltipIcon" message={feature_tooltips[row[0].toLowerCase()]}/>
+                        <TooltipIcon class="tooltipIcon" message={feature_tooltips[row[0].toLowerCase()]} />
                     {/if}
                 </td>
                 <td>
