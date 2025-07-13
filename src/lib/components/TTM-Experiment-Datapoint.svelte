@@ -73,6 +73,16 @@
             selected_prediction = option;
             predictionLocked = true;
             logPrediction();
+            if (experimentPhase === 'test') {
+                if (selected_prediction === "I don't know") {
+                    alert(`The correct answer was: ${instance_prediction}`);
+                }
+                if (selected_prediction === instance_prediction) {
+                    alert("Correct prediction :)");
+                } else {
+                    alert(`Incorrect prediction... The correct answer was: ${instance_prediction}`);
+                }
+            }
         }
     }
 
