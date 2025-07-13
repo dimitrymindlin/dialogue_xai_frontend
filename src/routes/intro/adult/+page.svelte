@@ -197,8 +197,14 @@
         <Step>
             <h2 class="text-2xl">Experiment Structure</h2>
             <div class="container">
+                <p> This study will <b>help you understand how AI makes decisions</b> about people’s income.
+                    You’ll go through <b>different phases</b>, each designed to help you learn and test your understanding of the AI’s predictions.
+                    <br><br>
+                    The experiment consists of <b>four main phases</b>:
+                    <br><br>
+            </p>
                 <div>
-                    <h3><b style="color: dodgerblue;">Introduction Phase:</b></h3>
+                    <h3><b style="color: dodgerblue;">1. Introduction Phase:</b></h3>
                     <ol>
                         <li>1. <b>Observe:</b> Look at the person’s details.</li>
                         <li>2. <b>Make a Guess:</b> Use your intuition to decide whether the individual earns <b>more
@@ -212,7 +218,7 @@
             <!-- Learning Phase -->
             <h2 class="text-2xl">Experiment Structure</h2>
             <div class="container">
-                <h3><b style="color: green;">Learning Phase:</b></h3>
+                <h3><b style="color: green;">2. Learning Phase:</b></h3>
                 <ol>
                     <li>1. <b>Make a Guess:</b> Look at another person’s details and make a prediction.
                     </li>
@@ -235,11 +241,11 @@
             <!-- Testing Phase -->
             <h2 class="text-2xl">Experiment Structure</h2>
             <div class="container">
-                <h3><b style="color: purple;">Testing Phase:</b></h3>
+                <h3><b style="color: purple;">3. Testing Phase:</b></h3>
                 <ol>
-                    <li>1. <b>Predict:</b> Can you guess what the AI would say for a <b>similar person</b>?
+                    <li>1. <b>Predict:</b> Can you guess what the AI would predict for a <b>similar person</b>?
                     </li>
-                    <li>2. <b>This time, no help:</b> You won’t see the AI’s answer—just your own judgment!
+                    <li>2. <b>This time, no explanations:</b> Use your own judgment and see if you were correct.
                     </li>
                     <li>3. <b>Do this a few times:</b> to see if you’re getting better at it. (<b>{PUBLIC_TEACH_TEST_CYCLES}</b> times)
                     </li>
@@ -249,15 +255,14 @@
         </Step>
         <Step>
             <!-- Final Testing Phase -->
-            <h2 class="text-2xl">Experiment Structure</h2>
+            <h2 class="text-2xl">4. Experiment Structure</h2>
             <div class="container">
                 <h3><b style="color: dodgerblue;">Final Testing Phase</b></h3>
                 <ol>
-                    <li>1. <b>Final Roung of Guessing:</b> Can you predict the AI’s decision for a completely new person?
+                    <li>1. <b>Final Round of Guessing:</b> Can you predict the AI’s decision for a the shown person?
                     </li>
-                    <li>2. <b>Explain your choice:</b> Why do you think your guess is right?</li>
                     <li>3. <b>Earn Points:</b> Correct predictions get you closer to a reward.</li>
-                    <li>4. <b>Top performers win a bonus!:</b> If you’re in the top <b>10%</b>, you’ll get extra payment.
+                    <li>4. <b>Top performers win a bonus!:</b> If you’re in the top <b>10%</b>, you’ll get extra payment of 1.50$.
                     </li>
                 </ol>
                 <img alt="Step4 gif" src={step4_gif_path} style="height: 50vh;"/>
