@@ -19,10 +19,8 @@
     const datasetConfigs = {
         adult: {
             questions: [
-                "1. The model made predictions based on the data it was trained with. In this data, each person was captured by " +
-                "certain attributes. Which attribute was often the <b>most important</b> for the model's decision?",
-                "2. Which attribute was never the <b>least important</b> for the model's decision, but taken into account for the prediction?" +
-                "The model looked at this attribute to make the prediction but it had usually no influence.",
+                "1. You have seen different people and their attributes. Which attribute was <b>often the most important</b> for the model’s decision?",
+                "2. Which attribute was <b>taken into account</b> by the model but <b>usually had little to no influence</b> on its prediction?<br>",
                 "3. What <b>rules</b> do you think the model uses to <b>decide between\n" +
                 "individuals</b> earning over 50k and under 50k? While the model uses complex patterns, what rules or patterns could you spot?",
                 "4. (Optional) Is there anything <b>surprising or unexpected</b> you found in the model? Or something you <b>did not understand</b> despite the explanations?"
