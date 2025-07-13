@@ -254,12 +254,14 @@
                     <option value="4">Completely confident</option>
                 </select>
             </div>
-            {#if (experimentPhase === 'final-test')}
-                <FeedbackWindow
+            {#if experimentPhase === 'final-test'}
+                {#if datapoint_count === 1 || datapoint_count === 3 || datapoint_count === 7}
+                    <FeedbackWindow
                         placeholder="Please describe why you made the decision..."
                         submitLabel="Next"
                         on:feedbackSubmit={feedbackClicked}
-                />
+                    />
+                {/if}
             {/if}
         {:else}
             <form>
