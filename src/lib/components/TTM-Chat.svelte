@@ -87,7 +87,7 @@
             isUser: true,
             feedback: false
         };
-        dispatch('addUserMessage', userMessage);
+        messages = [...messages, userMessage];
 
         const userInput = inputMessage;
         inputMessage = '';
