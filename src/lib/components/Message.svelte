@@ -180,7 +180,7 @@
 
     // Start animation when component is mounted
     onMount(() => {
-        if (!message.isUser && !message.isStreaming && STREAMING_OPTION) {
+        if (!message.isUser && !message.isStreaming) {
             startTypingAnimation();
         } else {
             // For user messages, streaming messages, or when streaming is disabled, just display the full text
@@ -240,9 +240,9 @@
         {#if message.isUser}
             {@html message.text}
         {:else}
-            <!-- Animate only AI responses that are not streaming and when streaming option is enabled -->
+            <!-- Animate only AI responses that are not streaming -->
             <div class="animated-text">
-                {#if isTyping && !message.isStreaming && STREAMING_OPTION}
+                {#if isTyping && !message.isStreaming}
                     {@html renderHTML(displayedText, false)}
                     <span class="typing-cursor">|</span>
                     <div class="skip-animation" on:click|stopPropagation={skipAnimation}>
@@ -254,7 +254,7 @@
             </div>
         {/if}
         
-        {#if !message.isUser && message.feedback && (!STREAMING_OPTION || (!isTyping && !message.isStreaming))}
+        {#if !message.isUser && message.feedback && !isTyping && !message.isStreaming}
             <br/>
             <span class="float-right flex flex-wrap" on:click|stopPropagation in:fade={{ delay: 1000, duration: 250 }}>
             <span class="text-sm text-gray-600 mt-2 mr-1">Liking the response?</span>
@@ -263,7 +263,7 @@
           </span>
         {/if}
         <br/>
-        {#if message.followup && message.followup.length > 0 && (!STREAMING_OPTION || (!isTyping && !message.isStreaming))}
+        {#if message.followup && message.followup.length > 0 && !isTyping && !message.isStreaming}
             <div class="follow-up-questions">
                 <p><b>Clarification Question</b></p>
                 {#each message.followup as question}
