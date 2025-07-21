@@ -17,6 +17,18 @@
     justify-content: center;
     width: var(--size);
     height: var(--size);
+    animation: fadeIn 0.5s ease-in-out forwards;
+    animation-delay: 1.5s;
+    opacity: 0;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   .circle {

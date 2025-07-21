@@ -21,6 +21,7 @@
     let isProcessingSpeech = false;
     let hasText = false; // New variable to track if there's text in the input
     let showSoundWaveOverlay = false; // New variable to control overlay visibility
+    let isWaitingForResponse = false; // New variable to track if we are waiting for a backend response
 
     // Autocomplete suggestions for the chat input with substituted attributes
     // TODO: Make Dataset dependent
@@ -78,7 +79,7 @@
 
     function sendMessage() {
         if (inputMessage.trim() === '') return;
-        
+
         // Create user message
         const userMessage: TChatMessage = {
             id: Date.now(),
@@ -86,20 +87,37 @@
             isUser: true,
             feedback: false
         };
-        messages = [...messages, userMessage];
-        
+        dispatch('addUserMessage', userMessage);
+
         const userInput = inputMessage;
         inputMessage = '';
-        
+
+        // --- Start loading logic ---
+        let responseStarted = false;
+        const timer = setTimeout(() => {
+            if (!responseStarted) {
+                isWaitingForResponse = true;
+            }
+        }, 1000); // Show loading indicator after 1 second
+
+        const handleResponseStart = () => {
+            if (responseStarted) return; // Ensure this only runs once
+            responseStarted = true;
+            clearTimeout(timer);
+            isWaitingForResponse = false;
+        };
+        // --- End loading logic ---
+
         if (STREAMING_OPTION) {
             // Use streaming API
             let aiMessageId: number | null = null;
             let hasCreatedAiMessage = false;
-            
+
             console.log('Sending message with streaming:', userInput);
             backend.xai(user_id).get_user_message_response_stream(userInput, (chunk) => {
+                handleResponseStart(); // Hide loading indicator on first chunk
                 console.log('Received stream chunk:', chunk);
-                
+
                 // Create AI message placeholder on first chunk
                 if (!hasCreatedAiMessage) {
                     aiMessageId = Date.now() + 1;
@@ -155,8 +173,9 @@
                     messages = messages; // Trigger reactivity
                 }
             }).catch(error => {
+                handleResponseStart(); // Also handle on error
                 console.error('Stream error:', error);
-                
+
                 // Create AI message for error if not created yet
                 if (!hasCreatedAiMessage) {
                     aiMessageId = Date.now() + 1;
@@ -185,12 +204,11 @@
         } else {
             // Use non-streaming API
             console.log('Sending message without streaming:', userInput);
-            
-            // Don't create AI message immediately - let ProgressMessage show
-            // Make non-streaming API call
+
             backend.xai(user_id).get_user_message_response(userInput)
                 .then(response => response.json())
                 .then(data => {
+                    handleResponseStart();
                     // Create AI message when response arrives
                     const aiMessage: TChatMessage = {
                         id: Date.now() + 1,
@@ -213,8 +231,9 @@
                     });
                 })
                 .catch(error => {
+                    handleResponseStart();
                     console.error('Non-streaming API error:', error);
-                    
+
                     // Create error message
                     const errorMessage: TChatMessage = {
                         id: Date.now() + 1,
@@ -384,9 +403,8 @@
             <Message {message} on:feedbackButtonClick={forwardFeedback} on:questionClick={forwardQuestionClick}/>
         {/each}
 
-        <!-- Show progress message if the last message is from the user and no AI response yet -->
-        {#if messages.length && messages[messages.length - 1].isUser && 
-             !messages.some(m => !m.isUser && m.text && m.text.trim().length > 0)}
+        <!-- Show progress message if we are waiting for a response from the backend -->
+        {#if isWaitingForResponse}
             <ProgressMessage/>
         {/if}
     </main>
