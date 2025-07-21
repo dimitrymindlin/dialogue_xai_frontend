@@ -229,28 +229,39 @@ let experiment_phase: TTestOrTeaching = CONFIG.introPoints > 0 ? 'intro-test' : 
     }
 
     async function handleStreamComplete(e: any) {
-        const { message, response } = e.detail;
-        
-        // Log event
-        const details = {
-            datapoint_count: datapoint_count,
-            user_question: message,
-            message: response,
-            question_id: response.question_id,
-            feature_id: response.feature_id,
-        };
-        fetch(`${base}/api/log_event`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                user_id: user_id,
-                event_source: 'teaching',
-                event_type: 'question',
-                details: details,
-            })
-        });
+      const { message: userMessage, response } = e.detail;
+
+      // 1. Push the user's free-text message
+      createAndPushMessage(
+        userMessage,
+        true,
+        false,
+        response.question_id,
+        response.feature_id,
+        response.followup
+      );
+
+      // 2. Push the backend’s response
+      pushMessage(response);
+
+      // 3. Log event
+      const details = {
+        datapoint_count: datapoint_count,
+        user_question: userMessage,
+        message: response,
+        question_id: response.question_id,
+        feature_id: response.feature_id,
+      };
+      fetch(`${base}/api/log_event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user_id,
+          event_source: 'teaching',
+          event_type: 'question',
+          details: details,
+        })
+      });
     }
 
     // Helper to decide the next phase & count
