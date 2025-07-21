@@ -61,11 +61,13 @@
 
     export let selected_prediction = null;
     let predictionLocked = false;
+    let predictionLogged = false;
 
     // Reset when a new datapoint loads
     $: if (datapoint) {
         selected_prediction = null;
         predictionLocked = false;
+        predictionLogged = false;
     }
 
     function handleClick(option: string) {
@@ -110,6 +112,8 @@
     }
 
     async function logPrediction(event?: any) {
+        if (predictionLogged) return;
+
         const isFinalTest = experimentPhase === 'final-test';
         const isIntroTest = experimentPhase === 'intro-test';
 
@@ -127,6 +131,7 @@
         // Dispatch a user_predicted event if prediction is available
         if (user_id !== null && selected_prediction !== null) {
             dispatch('user_predicted', {user_prediction: selected_prediction});
+            predictionLogged = true;
         }
 
         // Show spinner by dispatching 'clicked' if not in teaching phase
