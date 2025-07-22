@@ -388,7 +388,7 @@
 
     // Add environment variable for message icon
     const SPEECH_RECOGNITION = import.meta.env.VITE_SPEECH_RECOGNITION === 'true';
-    const STREAMING_OPTION = import.meta.env.VITE_STREAMING_OPTION !== 'false'; // Default: true
+    const STREAMING_OPTION = import.meta.env.VITE_STREAMING_OPTION === 'true'; // Default: false
 </script>
 
 <svelte:head>
