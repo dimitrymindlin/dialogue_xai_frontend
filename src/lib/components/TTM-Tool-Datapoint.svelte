@@ -3,6 +3,7 @@
     import Header from "$lib/components/Header.svelte";
     import type {PredictionProbability} from "$lib/types";
     import '$lib/../global.css';
+    import Demographics from "./Demographics.svelte";
 
     export let feature_names;
     export let data: { [key: string]: string };
@@ -33,13 +34,16 @@
                 feature_names={feature_names}
         />
     </main>
+    <div class="demographics-section">
+        <Demographics />
+    </div>
     {#if prediction_probability && prediction_probability.length > 0}
         <div class="mx-3.5">
             <h2 style="text-align: center">Prediction Probabilities</h2>
             {#each prediction_probability as {label, probability}}
                 <div style="display: flex; align-items: center;">
                     <p style="margin-right: 10px;">{label}</p>
-                    <progress value={probability * 100} max="100" style="flex-grow: 1;"></progress>
+                    <progress value={Number(probability) * 100} max="100" style="flex-grow: 1;"></progress>
                     <p style="margin-left: 10px;">{probability}</p>
                 </div>
                 <hr>
@@ -53,6 +57,18 @@
         background: var(--questions-bg);
         min-height: 97vh;
         max-height: 97vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    main {
+        flex-shrink: 0;
+    }
+
+    .demographics-section {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 0 1rem;
     }
 
     @media (max-width: 600px) {

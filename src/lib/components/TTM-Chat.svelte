@@ -11,6 +11,8 @@
     import {getDatasetConfig} from '$lib/dataset-configs';
     import {env} from '$env/dynamic/public';
     const PUBLIC_BACKEND_URL = env.PUBLIC_BACKEND_URL;
+    import { userDemographics } from '$lib/stores';
+
     export let messages: TChatMessage[] = [];
     let element: HTMLElement;
     let inputMessage = '';
@@ -44,10 +46,6 @@
 
     function forwardFeedback(event: CustomEvent) {
         dispatch('feedbackButtonClick', event.detail);
-    }
-
-     function forwardQuestionClick(event: CustomEvent) {
-        dispatch('questionClick', event.detail);
     }
 
     function handleKeydown(event: KeyboardEvent) {
@@ -151,6 +149,12 @@
                         feedback: false
                     };
                     messages = messages; // Trigger reactivity
+                }
+                else if (chunk.type === 'demographics') {
+                    console.log('Received demographics chunk:', chunk);
+                    if(chunk.content){
+                        userDemographics.set(chunk.content);
+                    }
                 }
             }).catch(error => {
                 handleResponseStart(); // Also handle on error
@@ -380,7 +384,7 @@
     <Header>Chatbot</Header>
     <main bind:this={element} class="flex-1 overflow-y-auto h-full p-3">
         {#each messages as message}
-            <Message {message} on:feedbackButtonClick={forwardFeedback} on:questionClick={forwardQuestionClick}/>
+            <Message {message} on:feedbackButtonClick={forwardFeedback} on:questionClick={(e) => dispatch('questionClick', e.detail)}/>
         {/each}
 
         <!-- Show progress message if we are waiting for a response from the backend -->
