@@ -1,6 +1,7 @@
 import { env } from '$env/dynamic/public';
 
 const PUBLIC_BACKEND_URL = env.PUBLIC_BACKEND_URL;
+const SHOW_USER_MODEL_PANEL = env.PUBLIC_SHOW_USER_MODEL_PANEL;
 
 export default {
     xai: (user_id: string, study_group = 'A', user_ml_knowledge = "low") => ({
@@ -36,7 +37,11 @@ export default {
         get_user_message_response_stream: (message: string, onChunk: (chunk: any) => void) => {
             return fetch(PUBLIC_BACKEND_URL + "get_response_nl" + "?user_id=" + user_id, {
                 method: "POST",
-                body: JSON.stringify({message, streaming: true})
+                body: JSON.stringify({
+                    message, 
+                    streaming: true,
+                    show_user_model_panel: SHOW_USER_MODEL_PANEL === 'true'
+                })
             }).then(async response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);

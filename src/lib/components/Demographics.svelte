@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { userDemographics } from '$lib/stores';
+	import { env } from '$env/dynamic/public';
 
 	let openCategories: { [key: string]: boolean } = {};
+	
+	// Check if the panel should be shown
+	const showPanel = env.PUBLIC_SHOW_USER_MODEL_PANEL === 'true';
 
 	function toggleCategory(category: string) {
 		openCategories[category] = !openCategories[category];
@@ -18,6 +22,7 @@
 	}
 </script>
 
+{#if showPanel}
 <div class="demographics-container">
 	<div class="header">
 		<div class="confidence-container">
@@ -68,6 +73,7 @@
 		<p class="no-data">No demographic data available yet.</p>
 	{/if}
 </div>
+{/if}
 
 <style lang="postcss">
 	.demographics-container {
