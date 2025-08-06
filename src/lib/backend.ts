@@ -52,28 +52,22 @@ export default {
                 let buffer = '';
                 
                 while (true) {
-                    const { done, value } = await reader.read();
-                    
-                    if (done) {
-                        break;
-                    }
-                    
-                    buffer += decoder.decode(value, { stream: true });
-                    
-                    // Process complete SSE messages
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop() || ''; // Keep incomplete line in buffer
-                    
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const data = line.slice(6);
-                            if (data.trim()) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, {stream: true});
+                    const parts = buffer.split('\n\n');
+                    buffer = parts.pop() || ''; // Keep the last partial line in buffer
+
+                    for (const part of parts) {
+                        if (part.startsWith('data:')) {
+                            const jsonString = part.substring(5).trim();
+                            if (jsonString) {
                                 try {
-                                    const parsed = JSON.parse(data);
-                                    console.log('Stream chunk received:', parsed);
-                                    onChunk(parsed);
+                                    const chunk = JSON.parse(jsonString);
+                                    onChunk(chunk);
                                 } catch (e) {
-                                    console.error('Error parsing SSE data:', e, data);
+                                    console.error("Error parsing stream chunk:", e, "Chunk:", jsonString);
                                 }
                             }
                         }

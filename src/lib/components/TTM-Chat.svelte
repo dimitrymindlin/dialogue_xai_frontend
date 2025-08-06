@@ -8,6 +8,7 @@
     import SubmitButton from "$lib/components/SubmitButton.svelte";
     import SoundWaveOverlay from "./SoundWaveOverlay.svelte"; // Import the new overlay component
     import backend from '$lib/backend'; // Add backend import
+    import { userDemographics } from '$lib/stores';
 
     export let messages: TChatMessage[] = [];
     let element: HTMLElement;
@@ -62,10 +63,6 @@
 
     function forwardFeedback(event: CustomEvent) {
         dispatch('feedbackButtonClick', event.detail);
-    }
-
-     function forwardQuestionClick(event: CustomEvent) {
-        dispatch('questionClick', event.detail);
     }
 
     function handleKeydown(event: KeyboardEvent) {
@@ -152,6 +149,12 @@
                         feedback: false
                     };
                     messages = messages; // Trigger reactivity
+                }
+                else if (chunk.type === 'demographics') {
+                    console.log('Received demographics chunk:', chunk);
+                    if(chunk.content){
+                        userDemographics.set(chunk.content);
+                    }
                 }
             }).catch(error => {
                 console.error('Stream error:', error);
@@ -380,7 +383,7 @@
     <Header>Chatbot</Header>
     <main bind:this={element} class="flex-1 overflow-y-auto h-full p-3">
         {#each messages as message}
-            <Message {message} on:feedbackButtonClick={forwardFeedback} on:questionClick={forwardQuestionClick}/>
+            <Message {message} on:feedbackButtonClick={forwardFeedback} on:questionClick={(e) => dispatch('questionClick', e.detail)}/>
         {/each}
 
         <!-- Show progress message if the last message is from the user and no AI response yet -->
