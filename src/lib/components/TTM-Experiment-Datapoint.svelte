@@ -123,7 +123,9 @@
         }
 
         // In final-test, extract feedback if provided and ensure it is non-empty
-        if (isFinalTest && event) {
+        // Only require feedback for datapoints where FeedbackWindow is shown (1, 3, 7)
+        const feedbackRequired = isFinalTest && (datapoint_count === 1 || datapoint_count === 3 || datapoint_count === 7);
+        if (feedbackRequired && event) {
             feedback = event?.detail?.feedback || '';
             if (!feedback) return;
         }
