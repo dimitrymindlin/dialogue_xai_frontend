@@ -95,6 +95,14 @@
         }
     }
 
+    $: if (
+        confidence_level !== "-1" &&
+        experimentPhase === 'final-test' &&
+        !(datapoint_count === 1 || datapoint_count === 3 || datapoint_count === 7)
+    ) {
+        logPrediction();
+    }
+
     function feedbackClicked(event) {
         feedback = event.detail.feedback;
         // Check if feedback and confidence level are set
