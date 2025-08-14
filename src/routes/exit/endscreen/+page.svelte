@@ -1,11 +1,11 @@
 <script lang="ts">
     import {userId} from '$lib/shared';
     import {get_attention_checks_failed, get_comprehension_check_failed} from '$lib/attentioncheck.ts';
-    import {PUBLIC_PROLIFIC_CODE_PASSED, PUBLIC_PROLIFIC_CODE_ATTENTION_FAILED, PUBLIC_PROLIFIC_CODE_RETURN} from '$env/static/public';
+    import {env} from '$env/dynamic/public';
     
-    const prolific_url_passed = `https://app.prolific.com/submissions/complete?cc=${PUBLIC_PROLIFIC_CODE_PASSED}`;
-    const prolific_url_attention_failed = `https://app.prolific.com/submissions/complete?cc=${PUBLIC_PROLIFIC_CODE_ATTENTION_FAILED}`;
-    const prolific_return_url = `https://app.prolific.com/submissions/complete?cc=${PUBLIC_PROLIFIC_CODE_RETURN}`;
+    const prolific_url_passed = `https://app.prolific.com/submissions/complete?cc=${env.PUBLIC_PROLIFIC_CODE_PASSED}`;
+    const prolific_url_attention_failed = `https://app.prolific.com/submissions/complete?cc=${env.PUBLIC_PROLIFIC_CODE_ATTENTION_FAILED}`;
+    const prolific_return_url = `https://app.prolific.com/submissions/complete?cc=${env.PUBLIC_PROLIFIC_CODE_RETURN}`;
 
     let user_id;
 
