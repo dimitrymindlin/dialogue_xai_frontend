@@ -8,6 +8,7 @@
     import {createEventDispatcher} from "svelte";
     import '$lib/../global.css';
     import {env} from '$env/dynamic/public';
+    import {getDatasetConfig} from '$lib/dataset-configs';
 
     const dispatch = createEventDispatcher();
     const PUBLIC_TEACH_TEST_CYCLES = env.PUBLIC_TEACH_TEST_CYCLES;
@@ -18,14 +19,17 @@
     export let interactiveOrStatic: TInteractiveOrStatic;
     export let feature_names;
     export let prediction_choices;
+    export let dataset: string = env.PUBLIC_DATASET_NAME || 'adult';
 
     export let instance_prediction: string;
 
     export let datapoint: { [key: string]: string };
     export let feature_tooltips: { [key: string]: string };
     export let feature_units: { [key: string]: string };
-    export let prediction_question =
-        'What will the model predict for the current case?';
+    // Get dataset-specific configuration
+    $: datasetConfig = getDatasetConfig(dataset);
+    $: prediction_question = datasetConfig.predictionQuestion;
+    $: introduction_test_intro = datasetConfig.introTestDescription;
 
     export let confidence_level = "-1";
     export let feedback = "";
@@ -46,11 +50,6 @@
     export let final_test_intro =
         "Final test of your knowledge about the <b>model's decision process</b>.<br> Based on what you learned before, what do you think the <b>model will predict</b> for this case? <br> <b>Note:</b> You will not receive \n" +
         "explanations this time.";
-
-    export let introduction_test_intro =
-        "The table shows a <b>description of a person</b>. <br> " +
-        "<b>Task</b>: Guess if the current person is earning <b>more or less than 50k$</b> a year.<br>" +
-        "<b>Note</b>: You will not see the model prediction and explanations in the Introduction Phase.";
 
     export let datapoint_count: number | null = null;
 

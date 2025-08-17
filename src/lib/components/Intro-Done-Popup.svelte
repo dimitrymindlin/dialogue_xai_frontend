@@ -2,11 +2,14 @@
     import {createEventDispatcher} from 'svelte';
     import {Step, RadioGroup, RadioItem, Stepper} from "@skeletonlabs/skeleton";
     import {base} from "$app/paths";
+    import {getDatasetConfig} from '$lib/dataset-configs';
+    import {env} from '$env/dynamic/public';
 
     const dispatch = createEventDispatcher();
 
     export let user_id;
     export let study_group;
+    export let dataset: string = env.PUBLIC_DATASET_NAME || 'adult';
 
     export let user_study_task_description;
 
@@ -37,9 +40,12 @@
         dispatch('confirm');
     }
 
-    let questions = [
+    // Get dataset-specific configuration
+    $: datasetConfig = getDatasetConfig(dataset);
+    
+    $: questions = [
         'The task was easy.',
-        'I have a good understanding of which factors most influence the income of an individual.',
+        datasetConfig.understandingQuestion,
         'I swim across the Atlantic Ocean every morning.',
         'I am confident in my predictions.',
         'I am not sure about my predictions.',

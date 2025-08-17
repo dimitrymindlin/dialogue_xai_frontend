@@ -16,6 +16,7 @@
     const PUBLIC_TEACH_TEST_CYCLES = env.PUBLIC_TEACH_TEST_CYCLES;
     const PUBLIC_FINAL_TEST_CYCLES = env.PUBLIC_FINAL_TEST_CYCLES;
     const PUBLIC_INTRO_TEST_CYCLES = env.PUBLIC_INTRO_TEST_CYCLES;
+    const PUBLIC_DATASET_NAME = env.PUBLIC_DATASET_NAME;
 
     import {goto} from '$app/navigation';
     import {base} from '$app/paths';
@@ -466,6 +467,7 @@ let experiment_phase: TTestOrTeaching = CONFIG.introPoints > 0 ? 'intro-test' : 
 
 {#if $introPopupVisible}
     <IntroDonePopup {user_id} {feature_questions} {general_questions} {study_group} {user_study_task_description}
+                    dataset={PUBLIC_DATASET_NAME}
                     on:confirm={handleConfirm}/>
 {:else if $selfAssesmentPopupVisible}
     {#if $questionRankingDone}
@@ -491,6 +493,7 @@ let experiment_phase: TTestOrTeaching = CONFIG.introPoints > 0 ? 'intro-test' : 
                 user_id={user_id}
                 instance_prediction={ml_label_prediction}
                 prediction_choices={prediction_choices}
+                dataset={PUBLIC_DATASET_NAME}
                 on:next={handleNext}
                 on:clicked={handleClicked}
                 on:user_predicted={setUserPrediction}
@@ -515,6 +518,7 @@ let experiment_phase: TTestOrTeaching = CONFIG.introPoints > 0 ? 'intro-test' : 
                         transition:fade={{ delay: 250, duration: 500 }}
                 >
                     <TTMChat {messages} {study_group} {user_id} user_input={true}
+                             dataset={PUBLIC_DATASET_NAME}
                              on:feedbackButtonClick={handleFeedbackButtonClick}
                              on:streamComplete={handleStreamComplete}
                              on:next={handleNext}
@@ -527,6 +531,7 @@ let experiment_phase: TTestOrTeaching = CONFIG.introPoints > 0 ? 'intro-test' : 
                         transition:fade={{ delay: 250, duration: 500 }}
                 >
                     <TTMChat {messages} {study_group} user_input={false}
+                             dataset={PUBLIC_DATASET_NAME}
                              on:feedbackButtonClick={handleFeedbackButtonClick}
                              on:next={handleNext}
                              on:questionClick={submitQuestion}

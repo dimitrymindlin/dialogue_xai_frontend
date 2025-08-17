@@ -8,6 +8,8 @@
     import SubmitButton from "$lib/components/SubmitButton.svelte";
     import SoundWaveOverlay from "./SoundWaveOverlay.svelte"; // Import the new overlay component
     import backend from '$lib/backend'; // Add backend import
+    import {getDatasetConfig} from '$lib/dataset-configs';
+    import {env} from '$env/dynamic/public';
 
     export let messages: TChatMessage[] = [];
     let element: HTMLElement;
@@ -15,6 +17,7 @@
     export let user_input = true;
     export let study_group = '';
     export let user_id = '';
+    export let dataset: string = env.PUBLIC_DATASET_NAME || 'adult';
     let isRecording = false;
     let audioRecorder: MediaRecorder | null = null;
     let audioChunks: Blob[] = [];
@@ -23,36 +26,13 @@
     let showSoundWaveOverlay = false; // New variable to control overlay visibility
     let isWaitingForResponse = false; // New variable to track if we are waiting for a backend response
 
-    // Autocomplete suggestions for the chat input with substituted attributes
-    // TODO: Make Dataset dependent
-    let adult_suggestions = [
-        "Explain this prediction to me",
-        "Why under 50k?",
-        "Why over 50k?",
-        "Why do you think so?",
-        "What factors matter the most in how the model makes its decision?",
-        "Which features play the strongest role in influencing the model's prediction?",
-        "What factors have very little effect on the model's decision?",
-        "Which features contribute the least to the model's prediction?",
-        "How much does each feature influence the prediction for this person?",
-        "How strong is the effect of each factor on this person's outcome?",
-        "What features would have to change to get a different prediction?",
-        "Which factors must be altered for the model to predict something else?",
-        "What set of features matters the most for this individual's prediction?",
-        "Which collection of factors is most crucial for this person's result?",
-        "How sure is the model about its prediction for this individual?",
-        "What level of certainty does the model have regarding this person's prediction?",
-        "Would the model's prediction change if just the Occupation were different?",
-        "If we only alter the Occupation, does the prediction for this person shift?",
-        "In general, how does someone's Occupation relate to the model's prediction?",
-        "What is the typical relationship between Occupation and the model's decision?",
-        "What is the spread of Age values across the dataset?",
-        "How do the various Age values compare throughout the dataset?"
-    ];
+    // Get dataset-specific configuration including chat suggestions
+    $: datasetConfig = getDatasetConfig(dataset);
+    $: chatSuggestions = datasetConfig.chatSuggestions;
 
     // Filter suggestions based on the input text
     $: filteredSuggestions = inputMessage.trim()
-        ? adult_suggestions.filter(s => s.toLowerCase().includes(inputMessage.toLowerCase()))
+        ? chatSuggestions.filter(s => s.toLowerCase().includes(inputMessage.toLowerCase()))
         : [];
 
     let autoscroll = false;
