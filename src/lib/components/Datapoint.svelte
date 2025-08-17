@@ -18,6 +18,30 @@
         return str.replace(/\s+/g, '').toLowerCase();
     }
 
+    // Robust key lookup function that handles case mismatches and variations
+    function findValueByKey(obj: { [key: string]: string }, searchKey: string): string | undefined {
+        // Try exact match first
+        if (obj[searchKey]) return obj[searchKey];
+        
+        // Try case-insensitive match
+        const normalizedSearchKey = searchKey.toLowerCase();
+        for (const [key, value] of Object.entries(obj)) {
+            if (key.toLowerCase() === normalizedSearchKey) {
+                return value;
+            }
+        }
+        
+        // Try normalized match (no spaces, lowercase)
+        const fullyNormalizedSearchKey = normalizeString(searchKey);
+        for (const [key, value] of Object.entries(obj)) {
+            if (normalizeString(key) === fullyNormalizedSearchKey) {
+                return value;
+            }
+        }
+        
+        return undefined;
+    }
+
     // Normalize feature_names for comparison
     let normalizedFeatureNames = feature_names.map(f => ({
         original: f,
@@ -55,8 +79,8 @@
             <tr class="{row[1].includes('Current:') ? 'highlighted' : ''}">
                 <td>
                     <span>{row[0]}</span>
-                    {#if feature_tooltips[row[0].toLowerCase()]}
-                        <TooltipIcon class="tooltipIcon" message={feature_tooltips[row[0].toLowerCase()]} />
+                    {#if findValueByKey(feature_tooltips, row[0])}
+                        <TooltipIcon class="tooltipIcon" message={findValueByKey(feature_tooltips, row[0])} />
                     {/if}
                 </td>
                 <td>
@@ -66,8 +90,8 @@
                     {:else}
                         <span>{row[1]}</span>
                     {/if}
-                    {#if feature_units[row[0].toLowerCase()]}
-                        <span> {feature_units[row[0].toLowerCase()]}</span>
+                    {#if findValueByKey(feature_units, row[0])}
+                        <span> {findValueByKey(feature_units, row[0])}</span>
                     {/if}
                 </td>
             </tr>
