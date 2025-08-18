@@ -55,7 +55,7 @@
     const attention_check_correct_answer = ['-2', '-1'];
 
     // Create Answer Array
-    let answers = new Array(questions.length).fill(0);
+    $: answers = new Array(questions.length).fill(0);
 
     const taskDescription = `Your <b>next task</b> will be to guess <b>${user_study_task_description}</b>.<br><br>`;
     const followUpActionStatic = "Afterward, you can <b>see the AI's prediction</b> and read the provided explanations";
