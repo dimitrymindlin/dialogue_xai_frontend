@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import {createEventDispatcher} from 'svelte';
     import {Step, RadioGroup, RadioItem, Stepper} from "@skeletonlabs/skeleton";
     import {base} from "$app/paths";
