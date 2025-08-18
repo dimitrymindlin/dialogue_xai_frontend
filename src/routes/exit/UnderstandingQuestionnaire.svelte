@@ -51,7 +51,7 @@
                 "1. The model made predictions based on the data it was trained with. In this data, each person was captured by " +
                 "certain attributes. Which attribute was often the <b>most important</b> for the model's decision about diabetes risk?",
                 "2. Which attribute was the <b>least important</b> for the model's decision, but taken into account for the prediction?" +
-                "(The model looked at this attribute to make the prediction but it had usually no influence.)",
+                "(The model looked at this attribute to make the prediction, but it had usually no influence.)",
                 "3. What <b>rules</b> do you think the model uses to <b>decide between\n" +
                 "individuals</b> with and without diabetes? While the model uses complex patterns, what rules or patterns could you spot?",
                 "4. (Optional) Is there anything <b>surprising or unexpected</b> you found in the model? Or something you <b>did not understand</b> despite the explanations?"
