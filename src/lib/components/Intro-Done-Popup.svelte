@@ -55,7 +55,17 @@
     const attention_check_correct_answer = ['-2', '-1'];
 
     // Create Answer Array
-    $: answers = new Array(questions.length).fill(0);
+    let answers: number[] = [];
+    
+    // Initialize answers array when questions change, but preserve existing values
+    $: if (questions && answers.length !== questions.length) {
+        const newAnswers = new Array(questions.length).fill(0);
+        // Preserve existing answers if they exist
+        for (let i = 0; i < Math.min(answers.length, newAnswers.length); i++) {
+            newAnswers[i] = answers[i];
+        }
+        answers = newAnswers;
+    }
 
     const taskDescription = `Your <b>next task</b> will be to guess <b>${user_study_task_description}</b>.<br><br>`;
     const followUpActionStatic = "Afterward, you can <b>see the AI's prediction</b> and read the provided explanations";
