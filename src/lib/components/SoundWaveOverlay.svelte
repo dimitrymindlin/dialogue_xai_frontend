@@ -6,7 +6,7 @@
     const dispatch = createEventDispatcher();
     
     // API URL for backend communication
-    const API_URL = 'http://localhost:5000';
+    const API_URL = 'http://localhost:4555';
     
     // Global flag to check if overlay is closed
     let isOverlayClosed = false;

@@ -301,7 +301,7 @@
                     
                     
                     //const apiUrl = `${base}/speech-to-text`;
-                    const apiUrl = 'http://localhost:5000/speech-to-text';
+                    const apiUrl = 'http://localhost:4555/speech-to-text';
                     console.log('Sending audio to API:', apiUrl);
                     
                     
