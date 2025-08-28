@@ -94,6 +94,19 @@ export default {
                 }
             });
         },
+
+        update_ml_knowledge: (ml_knowledge: string) => {
+          
+            console.log('Trying update_ml_knowledge with user_id:', user_id);
+            console.log('Backend URL:', PUBLIC_BACKEND_URL);
+            
+
+            return fetch(`${PUBLIC_BACKEND_URL}update_ml_knowledge`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id, ml_knowledge })
+            });
+        },
         set_user_prediction: (experiment_phase: string, datapoint_count: number, user_prediction: string) => fetch(PUBLIC_BACKEND_URL + 'set_user_prediction', {
             method: "POST",
             headers: {'Content-Type': 'application/json'},

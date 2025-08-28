@@ -1,11 +1,20 @@
 <script lang="ts">
 	import { userDemographics } from '$lib/stores';
 	import { env } from '$env/dynamic/public';
+	import { currentUserId } from '$lib/stores';
+	import backend from '$lib/backend';
 
 	let openCategories: { [key: string]: boolean } = {};
 	
 	// Check if the panel should be shown
 	const showPanel = env.PUBLIC_SHOW_USER_MODEL_PANEL === 'true';
+	
+	// Debug user id store
+	$: console.log('currentUserId store value:', $currentUserId);
+
+	const mlLevels = ["very low", "low", "moderate", "high", "very high", "anonymous"];
+	let selectedMlIndex: number = 0;
+	let lastMlIndex: number = -1;
 
 	function toggleCategory(category: string) {
 		openCategories[category] = !openCategories[category];
@@ -18,6 +27,54 @@
 					openCategories[category] = true; // Default to open
 				}
 			});
+			// Initialize ml index when demographics arrive
+			const ml = $userDemographics["ml_knowledge"];
+			if (typeof ml === 'string') {
+				const idx = mlLevels.indexOf(ml);
+				selectedMlIndex = idx >= 0 ? idx : 0;
+				lastMlIndex = selectedMlIndex;
+			}
+		}
+	}
+
+	function onSliderInput(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const newIndex = parseInt(input.value);
+		console.log('Slider input detected:', newIndex, 'label:', mlLevels[newIndex]);
+		
+		selectedMlIndex = newIndex;
+		
+		// update store value so label under section updates immediately
+		if ($userDemographics) {
+			const updated = { ...$userDemographics } as any;
+			updated["ml_knowledge"] = mlLevels[newIndex];
+			userDemographics.set(updated);
+		}
+		
+		// notify backend
+		const uid = $currentUserId;
+		console.log('Current uid from store:', uid, 'type:', typeof uid, 'length:', uid?.length);
+		if (uid && uid.trim()) {
+			console.log('Calling backend with user_id:', uid, 'ml_knowledge:', mlLevels[newIndex]);
+		console.log('Backend URL will be:', `${backend.xai(uid).constructor.name}`);
+		// Log actual endpoint URL by creating a temporary backend instance
+		try {
+			const testUrl = `${process.env.PUBLIC_BACKEND_URL || 'http://localhost:4555/'}update_ml_knowledge?user_id=${uid}`;
+			console.log('Full endpoint URL:', testUrl);
+		} catch(e) { console.log('URL debug failed'); }
+			backend.xai(uid).update_ml_knowledge(mlLevels[newIndex])
+				.then(response => {
+					console.log('Backend response status:', response.status);
+					return response.json();
+				})
+				.then(data => {
+					console.log('Backend response data:', data);
+				})
+				.catch((e) => {
+					console.error('Failed to update ml knowledge', e);
+				});
+		} else {
+			console.error('No user_id in store, cannot call backend');
 		}
 	}
 </script>
@@ -41,12 +98,26 @@
 	{#if $userDemographics}
 		{#each Object.entries($userDemographics) as [category, data]}
 			<div class="demographic-item">
-				<div class="item-header" on:click={() => toggleCategory(category)}>
+				<div class="item-header" role="button" tabindex="0" on:click={() => toggleCategory(category)} on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleCategory(category)}>
 					<h5>{category.charAt(0).toUpperCase() + category.slice(1).replace(/_/g, ' ')}</h5>
 					<button class="toggle-button">{openCategories[category] ? '⌄' : '›'}</button>
 				</div>
 				{#if openCategories[category]}
-                    {#if typeof data === 'string'}
+                    {#if category === 'ml_knowledge'}
+                        <div class="slider-container">
+                            <div class="slider-labels">
+                                <span class="label">{typeof data === 'string' ? data : ''}</span>
+                            </div>
+                            <div class="ml-slider-wrapper">
+                                <input type="range" min="0" max="5" step="1" value={selectedMlIndex} on:input={onSliderInput} on:change={onSliderInput} />
+                                <div class="ml-ticks">
+                                    {#each mlLevels as lvl, i}
+                                        <span class="tick {selectedMlIndex === i ? 'active' : ''}">{lvl}</span>
+                                    {/each}
+                                </div>
+                            </div>
+                        </div>
+                    {:else if typeof data === 'string'}
                         <div class="slider-container simple-value">
                             <span class="label">{data}</span>
                         </div>
@@ -98,17 +169,6 @@
 		align-items: center;
 		gap: 8px;
 		margin-bottom: 8px;
-	}
-	.a-icon {
-		background-color: black;
-		color: white;
-		border-radius: 50%;
-		width: 24px;
-		height: 24px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-weight: bold;
 	}
 	.title {
 		font-size: 1.1rem;
@@ -215,6 +275,61 @@
 		background-color: #bec4d7;
 		border-radius: 4px;
 		transition: width 0.3s ease;
+	}
+	.ml-slider-wrapper {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		position: relative;
+		z-index: 10;
+		overflow: visible;
+		border: 1px solid red; /* DEBUG - remove later */
+	}
+	.ml-slider-wrapper input[type="range"] {
+		appearance: none;
+		width: 100%;
+		height: 20px;
+		background: #e5e7eb;
+		border-radius: 2px;
+		outline: none;
+		position: relative;
+		z-index: 15;
+		pointer-events: auto;
+		cursor: pointer;
+		border: 1px solid blue; /* DEBUG - remove later */
+	}
+	.ml-slider-wrapper input[type="range"]::-webkit-slider-thumb {
+		appearance: none;
+		width: 16px;
+		height: 16px;
+		background: #bec4d7;
+		border-radius: 50%;
+		border: 1px solid #9ca3af;
+		cursor: pointer;
+	}
+	.ml-slider-wrapper input[type="range"]::-moz-range-thumb {
+		width: 16px;
+		height: 16px;
+		background: #bec4d7;
+		border: 1px solid #9ca3af;
+		border-radius: 50%;
+		cursor: pointer;
+	}
+	.ml-ticks {
+		display: grid;
+		grid-template-columns: repeat(6, 1fr);
+		gap: 4px;
+		font-size: 0.75rem;
+		color: #6b7280;
+		pointer-events: none;
+		z-index: 1;
+	}
+	.ml-ticks .tick {
+		text-align: center;
+	}
+	.ml-ticks .tick.active {
+		color: #374151;
+		font-weight: 600;
 	}
 	.no-data {
 		color: #6b7280;

@@ -14,8 +14,10 @@ import type {TDatapointResult} from '$lib/types';
  */
 export const load = (async ({url}) => {
     // backend returns data that is either questions or report (A/B study design)
-    const user_id = "";
+    const user_id = url.searchParams.get('user_id') || 'default_user';
     const study_group = "interactive";
+    
+    console.log('Page load - user_id from URL:', user_id);
 
     // Init
     const {
