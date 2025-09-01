@@ -10,7 +10,7 @@
     import backend from '$lib/backend'; // Add backend import
     import {getDatasetConfig} from '$lib/dataset-configs';
     import {env} from '$env/dynamic/public';
-
+    const PUBLIC_BACKEND_URL = env.PUBLIC_BACKEND_URL;
     export let messages: TChatMessage[] = [];
     let element: HTMLElement;
     let inputMessage = '';
@@ -298,7 +298,7 @@
                     
                     
                     //const apiUrl = `${base}/speech-to-text`;
-                    const apiUrl = 'http://localhost:5000/speech-to-text';
+                    const apiUrl = PUBLIC_BACKEND_URL + "/speech-to-text";
                     console.log('Sending audio to API:', apiUrl);
                     
                     

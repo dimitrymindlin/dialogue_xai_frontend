@@ -2,11 +2,13 @@
     import { createEventDispatcher, onMount, onDestroy } from 'svelte';
     import backend from '$lib/backend';
     import type { TChatMessage } from '$lib/types';
-    
+    import { env } from '$env/dynamic/public';
+
+    const PUBLIC_BACKEND_URL = env.PUBLIC_BACKEND_URL;
     const dispatch = createEventDispatcher();
     
     // API URL for backend communication
-    const API_URL = 'http://localhost:5000';
+    const API_URL = PUBLIC_BACKEND_URL;
     
     // Global flag to check if overlay is closed
     let isOverlayClosed = false;
