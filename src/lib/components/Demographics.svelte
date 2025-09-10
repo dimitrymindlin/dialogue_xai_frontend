@@ -12,35 +12,52 @@
 	// Debug user id store
 	$: console.log('currentUserId store value:', $currentUserId);
 
-	const mlLevels = ["very low", "low", "moderate", "high", "very high", "anonymous"];
+	const mlLevels = ["low", "medium", "high"];
+	const cognitiveStates = ["active", "interactive", "constructive"];
 	let selectedMlIndex: number = 0;
+	let selectedCognitiveIndex: number = 0;
 	let lastMlIndex: number = -1;
+	let lastCognitiveIndex: number = -1;
 
 	function toggleCategory(category: string) {
 		openCategories[category] = !openCategories[category];
 	}
 
+	// Initialize default states - always show both sliders as open
 	$: {
+		if (openCategories['ml_knowledge'] === undefined) {
+			openCategories['ml_knowledge'] = true;
+		}
+		if (openCategories['cognitive_state'] === undefined) {
+			openCategories['cognitive_state'] = true;
+		}
+		
+		// Initialize from backend data if available
 		if ($userDemographics) {
-			Object.keys($userDemographics).forEach(category => {
-				if(openCategories[category] === undefined) {
-					openCategories[category] = true; // Default to open
-				}
-			});
-			// Initialize ml index when demographics arrive
 			const ml = $userDemographics["ml_knowledge"];
 			if (typeof ml === 'string') {
 				const idx = mlLevels.indexOf(ml);
-				selectedMlIndex = idx >= 0 ? idx : 0;
-				lastMlIndex = selectedMlIndex;
+				if (idx >= 0) {
+					selectedMlIndex = idx;
+					lastMlIndex = selectedMlIndex;
+				}
+			}
+			
+			const cognitive = $userDemographics["cognitive_state"];
+			if (typeof cognitive === 'string') {
+				const idx = cognitiveStates.indexOf(cognitive);
+				if (idx >= 0) {
+					selectedCognitiveIndex = idx;
+					lastCognitiveIndex = selectedCognitiveIndex;
+				}
 			}
 		}
 	}
 
-	function onSliderInput(event: Event) {
+	function onMlSliderInput(event: Event) {
 		const input = event.target as HTMLInputElement;
 		const newIndex = parseInt(input.value);
-		console.log('Slider input detected:', newIndex, 'label:', mlLevels[newIndex]);
+		console.log('ML Slider input detected:', newIndex, 'label:', mlLevels[newIndex]);
 		
 		selectedMlIndex = newIndex;
 		
@@ -51,18 +68,36 @@
 			userDemographics.set(updated);
 		}
 		
-		// notify backend
+		// Call backend with both values
+		updateBackend();
+	}
+	
+	function onCognitiveSliderInput(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const newIndex = parseInt(input.value);
+		console.log('Cognitive Slider input detected:', newIndex, 'label:', cognitiveStates[newIndex]);
+		
+		selectedCognitiveIndex = newIndex;
+		
+		// update store value so label under section updates immediately
+		if ($userDemographics) {
+			const updated = { ...$userDemographics } as any;
+			updated["cognitive_state"] = cognitiveStates[newIndex];
+			userDemographics.set(updated);
+		}
+		
+		// Call backend with both values
+		updateBackend();
+	}
+	
+	function updateBackend() {
 		const uid = $currentUserId;
-		console.log('Current uid from store:', uid, 'type:', typeof uid, 'length:', uid?.length);
 		if (uid && uid.trim()) {
-			console.log('Calling backend with user_id:', uid, 'ml_knowledge:', mlLevels[newIndex]);
-		console.log('Backend URL will be:', `${backend.xai(uid).constructor.name}`);
-		// Log actual endpoint URL by creating a temporary backend instance
-		try {
-			const testUrl = `${process.env.PUBLIC_BACKEND_URL || 'http://localhost:4555/'}update_ml_knowledge?user_id=${uid}`;
-			console.log('Full endpoint URL:', testUrl);
-		} catch(e) { console.log('URL debug failed'); }
-			backend.xai(uid).update_ml_knowledge(mlLevels[newIndex])
+			const mlValue = mlLevels[selectedMlIndex];
+			const cognitiveValue = cognitiveStates[selectedCognitiveIndex];
+			console.log('Calling backend with user_id:', uid, 'ml_knowledge:', mlValue, 'cognitive_state:', cognitiveValue);
+			
+			backend.xai(uid).update_user_model(mlValue, cognitiveValue)
 				.then(response => {
 					console.log('Backend response status:', response.status);
 					return response.json();
@@ -71,7 +106,7 @@
 					console.log('Backend response data:', data);
 				})
 				.catch((e) => {
-					console.error('Failed to update ml knowledge', e);
+					console.error('Failed to update user model', e);
 				});
 		} else {
 			console.error('No user_id in store, cannot call backend');
@@ -95,54 +130,51 @@
 		</div>
 	</div>
 
-	{#if $userDemographics}
-		{#each Object.entries($userDemographics) as [category, data]}
-			<div class="demographic-item">
-				<div class="item-header" role="button" tabindex="0" on:click={() => toggleCategory(category)} on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleCategory(category)}>
-					<h5>{category.charAt(0).toUpperCase() + category.slice(1).replace(/_/g, ' ')}</h5>
-					<button class="toggle-button">{openCategories[category] ? '⌄' : '›'}</button>
+	<!-- ML Knowledge Slider -->
+	<div class="demographic-item">
+		<div class="item-header" role="button" tabindex="0" on:click={() => toggleCategory('ml_knowledge')} on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleCategory('ml_knowledge')}>
+			<h5>ML Knowledge</h5>
+			<button class="toggle-button">{openCategories['ml_knowledge'] ? '⌄' : '›'}</button>
+		</div>
+		{#if openCategories['ml_knowledge'] !== false}
+			<div class="slider-container">
+				<div class="slider-labels">
+					<span class="label">{mlLevels[selectedMlIndex]}</span>
 				</div>
-				{#if openCategories[category]}
-                    {#if category === 'ml_knowledge'}
-                        <div class="slider-container">
-                            <div class="slider-labels">
-                                <span class="label">{typeof data === 'string' ? data : ''}</span>
-                            </div>
-                            <div class="ml-slider-wrapper">
-                                <input type="range" min="0" max="5" step="1" value={selectedMlIndex} on:input={onSliderInput} on:change={onSliderInput} />
-                                <div class="ml-ticks">
-                                    {#each mlLevels as lvl, i}
-                                        <span class="tick {selectedMlIndex === i ? 'active' : ''}">{lvl}</span>
-                                    {/each}
-                                </div>
-                            </div>
-                        </div>
-                    {:else if typeof data === 'string'}
-                        <div class="slider-container simple-value">
-                            <span class="label">{data}</span>
-                        </div>
-                    {:else if data && data.main_prediction}
-                        <div class="slider-container">
-                            <div class="slider-labels">
-                                <span class="label">{data.main_prediction.value}</span>
-                                <span class="percentage">{data.main_prediction.confidence}%</span>
-                            </div>
-                            <div class="slider-wrapper">
-                                <div class="progress-bar-background">
-                                    <div
-                                        class="progress-bar-foreground"
-                                        style="width: {data.main_prediction.confidence}%;"
-                                    ></div>
-                                </div>
-                            </div>
-                        </div>
-                    {/if}
-				{/if}
+				<div class="ml-slider-wrapper">
+					<input type="range" min="0" max="2" step="1" value={selectedMlIndex} on:input={onMlSliderInput} on:change={onMlSliderInput} />
+					<div class="ml-ticks">
+						{#each mlLevels as lvl, i}
+							<span class="tick {selectedMlIndex === i ? 'active' : ''}">{lvl}</span>
+						{/each}
+					</div>
+				</div>
 			</div>
-		{/each}
-	{:else}
-		<p class="no-data">No demographic data available yet.</p>
-	{/if}
+		{/if}
+	</div>
+
+	<!-- Cognitive State Slider -->
+	<div class="demographic-item">
+		<div class="item-header" role="button" tabindex="0" on:click={() => toggleCategory('cognitive_state')} on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleCategory('cognitive_state')}>
+			<h5>Cognitive State</h5>
+			<button class="toggle-button">{openCategories['cognitive_state'] ? '⌄' : '›'}</button>
+		</div>
+		{#if openCategories['cognitive_state'] !== false}
+			<div class="slider-container">
+				<div class="slider-labels">
+					<span class="label">{cognitiveStates[selectedCognitiveIndex]}</span>
+				</div>
+				<div class="ml-slider-wrapper">
+					<input type="range" min="0" max="2" step="1" value={selectedCognitiveIndex} on:input={onCognitiveSliderInput} on:change={onCognitiveSliderInput} />
+					<div class="ml-ticks">
+						{#each cognitiveStates as state, i}
+							<span class="tick {selectedCognitiveIndex === i ? 'active' : ''}">{state}</span>
+						{/each}
+					</div>
+				</div>
+			</div>
+		{/if}
+	</div>
 </div>
 {/if}
 
@@ -235,13 +267,6 @@
 		padding: 12px 16px;
 		background-color: #ffffff !important;
 	}
-    .demographics-container .simple-value {
-        padding: 12px 16px;
-        font-size: 0.9rem;
-        color: #374151;
-        font-weight: 500;
-        background-color: #ffffff !important;
-    }
 	.slider-labels {
 		display: flex;
 		justify-content: space-between;
@@ -250,32 +275,6 @@
 		margin-bottom: 8px;
 		font-weight: 500;
 	}
-	.percentage {
-		color: #374151;
-		font-weight: 600;
-	}
-	.slider-wrapper {
-		position: relative;
-		height: 12px;
-		display: flex;
-		align-items: center;
-	}
-	.progress-bar-background {
-		position: absolute;
-		height: 8px;
-		width: 100%;
-		background-color: #e5e7eb;
-		border-radius: 4px;
-		left: 0;
-		top: 50%;
-		transform: translateY(-50%);
-	}
-	.progress-bar-foreground {
-		height: 100%;
-		background-color: #bec4d7;
-		border-radius: 4px;
-		transition: width 0.3s ease;
-	}
 	.ml-slider-wrapper {
 		display: flex;
 		flex-direction: column;
@@ -283,7 +282,6 @@
 		position: relative;
 		z-index: 10;
 		overflow: visible;
-		border: 1px solid red; /* DEBUG - remove later */
 	}
 	.ml-slider-wrapper input[type="range"] {
 		appearance: none;
@@ -296,7 +294,6 @@
 		z-index: 15;
 		pointer-events: auto;
 		cursor: pointer;
-		border: 1px solid blue; /* DEBUG - remove later */
 	}
 	.ml-slider-wrapper input[type="range"]::-webkit-slider-thumb {
 		appearance: none;
@@ -317,7 +314,7 @@
 	}
 	.ml-ticks {
 		display: grid;
-		grid-template-columns: repeat(6, 1fr);
+		grid-template-columns: repeat(3, 1fr);
 		gap: 4px;
 		font-size: 0.75rem;
 		color: #6b7280;
@@ -330,11 +327,5 @@
 	.ml-ticks .tick.active {
 		color: #374151;
 		font-weight: 600;
-	}
-	.no-data {
-		color: #6b7280;
-		text-align: center;
-		padding: 40px 20px;
-		background-color: #ffffff;
 	}
 </style> 

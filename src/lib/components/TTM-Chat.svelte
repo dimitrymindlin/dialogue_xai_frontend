@@ -2,11 +2,11 @@
     import type {TChatMessage} from '$lib/types';
     import {afterUpdate, beforeUpdate} from 'svelte';
     import Header from './Header.svelte';
+    import TTSPlayer from '$lib/components/TTSPlayer.svelte';
     import Message from './Message.svelte';
     import ProgressMessage from './ProgressMessage.svelte'; // Import our new component
     import {createEventDispatcher} from 'svelte';
     import SubmitButton from "$lib/components/SubmitButton.svelte";
-    import SoundWaveOverlay from "./SoundWaveOverlay.svelte"; // Import the new overlay component
     import backend from '$lib/backend'; // Add backend import
     import {getDatasetConfig} from '$lib/dataset-configs';
     import {env} from '$env/dynamic/public';
@@ -27,10 +27,80 @@
     let hasText = false; // New variable to track if there's text in the input
     let showSoundWaveOverlay = false; // New variable to control overlay visibility
     let isWaitingForResponse = false; // New variable to track if we are waiting for a backend response
+    let isVoiceMode = false; // Voice recognition mode
+    let voiceRecognition: any = null;
+    let voiceTranscript = '';
+    let silenceTimer: any = null;
+    let isVoiceProcessing = false;
+    let processingWatchdog: any = null;
+    let demographicsGatePending = false; // Resume mic only after demographics chunk
+    let ttsEnabled: boolean = false;
+    let ttsMuted: boolean = false;
+    let ttsRef: any = null;
+    let lastSpokenMessageId: number | null = null;
+    
+    // Debug TTS state changes
+    $: console.log('[TTS] Toggle state changed:', ttsEnabled, 'ttsRef available:', !!ttsRef, 'muted:', ttsMuted);
 
     // Get dataset-specific configuration including chat suggestions
     $: datasetConfig = getDatasetConfig(dataset);
     $: chatSuggestions = datasetConfig.chatSuggestions;
+    function startProcessingWatchdog() {
+        if (processingWatchdog) {
+            clearTimeout(processingWatchdog);
+            processingWatchdog = null;
+        }
+        // Force recovery if we get stuck in processing
+        processingWatchdog = setTimeout(() => {
+            try {
+                if (isVoiceMode && isVoiceProcessing) {
+                    if (!demographicsGatePending) {
+                        console.warn('Processing watchdog fired - forcing resume');
+                        isVoiceProcessing = false;
+                        startVoiceRecognition();
+                    } else {
+                        console.warn('Processing watchdog fired but demographics not received yet; keeping mic paused');
+                    }
+                }
+            } catch (e) {
+                console.error('Watchdog resume error:', e);
+                isVoiceProcessing = false;
+            }
+        }, 8000);
+    }
+
+    function clearProcessingWatchdog() {
+        if (processingWatchdog) {
+            clearTimeout(processingWatchdog);
+            processingWatchdog = null;
+        }
+    }
+
+    // Autocomplete suggestions for the chat input with substituted attributes
+    let suggestions = [
+        "Explain this prediction to me",
+        "Why under 50k?",
+        "Why over 50k?",
+        "Why do you think so?",
+        "What factors matter the most in how the model makes its decision?",
+        "Which features play the strongest role in influencing the model's prediction?",
+        "What factors have very little effect on the model's decision?",
+        "Which features contribute the least to the model's prediction?",
+        "How much does each feature influence the prediction for this person?",
+        "How strong is the effect of each factor on this person's outcome?",
+        "What features would have to change to get a different prediction?",
+        "Which factors must be altered for the model to predict something else?",
+        "What set of features matters the most for this individual's prediction?",
+        "Which collection of factors is most crucial for this person's result?",
+        "How sure is the model about its prediction for this individual?",
+        "What level of certainty does the model have regarding this person's prediction?",
+        "Would the model's prediction change if just the Occupation were different?",
+        "If we only alter the Occupation, does the prediction for this person shift?",
+        "In general, how does someone's Occupation relate to the model's prediction?",
+        "What is the typical relationship between Occupation and the model's decision?",
+        "What is the spread of Age values across the dataset?",
+        "How do the various Age values compare throughout the dataset?"
+    ];
 
     // Filter suggestions based on the input text
     $: filteredSuggestions = inputMessage.trim()
@@ -43,6 +113,53 @@
 
     // Watch for changes in inputMessage to toggle hasText
     $: hasText = inputMessage.trim().length > 0;
+    
+    // Watch for new messages and resume voice recognition if needed
+    $: if (messages && messages.length > 0) {
+        const lastMessage = messages[messages.length - 1];
+        console.log('Reactive: lastMessage check - isUser:', lastMessage?.isUser, 'isStreaming:', lastMessage?.isStreaming, 'isVoiceMode:', isVoiceMode, 'isVoiceProcessing:', isVoiceProcessing);
+        if (!lastMessage.isUser && !lastMessage.isStreaming && isVoiceMode && isVoiceProcessing) {
+            console.log('Detected AI message completion, scheduling voice resume');
+            setTimeout(() => {
+                console.log('Reactive timeout executing - isVoiceMode:', isVoiceMode, 'isVoiceProcessing:', isVoiceProcessing);
+                if (isVoiceMode && isVoiceProcessing) {
+                    console.log('Auto-resuming voice recognition after message completion (reactive)');
+                    isVoiceProcessing = false;
+                    try {
+                        startVoiceRecognition();
+                    } catch (error) {
+                        console.error('Error in reactive voice resume:', error);
+                        isVoiceProcessing = false;
+                    }
+                }
+            }, 2000);
+        }
+    }
+
+    // TTS: when toggle enabled, auto-speak the latest complete AI message
+    $: if (ttsEnabled && messages && messages.length > 0) {
+        console.log('[TTS] Reactive check - enabled:', ttsEnabled, 'messages count:', messages.length, 'ttsRef:', !!ttsRef);
+        // Find latest AI message - include streaming ones that have accumulated text
+        const latestAi = [...messages].reverse().find(m => {
+            const isAi = !m.isUser;
+            const hasText = m.text && m.text.trim().length > 0;
+            const isComplete = !m.isStreaming; // Only speak when streaming is complete
+            console.log('[TTS] Checking message:', { id: m.id, isAi, hasText, isComplete, isStreaming: m.isStreaming });
+            return isAi && hasText && isComplete;
+        });
+        console.log('[TTS] Latest AI message:', latestAi ? { id: latestAi.id, textLength: latestAi.text?.length, isStreaming: latestAi.isStreaming } : 'none');
+        console.log('[TTS] Last spoken ID:', lastSpokenMessageId);
+        if (latestAi && Number(latestAi.id) !== lastSpokenMessageId && ttsRef) {
+            console.log('[TTS] About to speak message ID:', latestAi.id);
+            try {
+                ttsRef.speak(String(latestAi.text));
+                lastSpokenMessageId = Number(latestAi.id);
+                console.log('[TTS] Updated lastSpokenMessageId to:', lastSpokenMessageId);
+            } catch (e) {
+                console.warn('TTS reactive speak error', e);
+            }
+        }
+    }
 
     function forwardFeedback(event: CustomEvent) {
         dispatch('feedbackButtonClick', event.detail);
@@ -58,6 +175,26 @@
     function sendMessage() {
         if (inputMessage.trim() === '') return;
 
+        
+        // Pause voice recognition during processing but keep voice mode active
+        if (isVoiceMode) {
+            // isVoiceProcessing should already be set by the timer or manual call
+            if (!isVoiceProcessing) {
+                isVoiceProcessing = true;
+            }
+            // Gate resume until demographics arrives
+            demographicsGatePending = true;
+            startProcessingWatchdog();
+            if (voiceRecognition) {
+                voiceRecognition.stop();
+            }
+            // Clear any existing timers
+            if (silenceTimer) {
+                clearTimeout(silenceTimer);
+                silenceTimer = null;
+            }
+        }
+        
         // Create user message
         const userMessage: TChatMessage = {
             id: Date.now(),
@@ -86,6 +223,8 @@
         };
         // --- End loading logic ---
 
+        voiceTranscript = '';
+        
         if (STREAMING_OPTION) {
             // Use streaming API
             let aiMessageId: number | null = null;
@@ -135,6 +274,38 @@
                     };
                     messages = messages; // Trigger reactivity
                     
+                    // TTS: speak final AI content when enabled
+                    if (ttsEnabled && ttsRef && chunk.content) {
+                        console.log('[TTS] Speaking streaming final content, messageId:', aiMessageId);
+                        try { 
+                            ttsRef.speak(String(chunk.content)); 
+                            if (aiMessageId) { lastSpokenMessageId = Number(aiMessageId); }
+                        } catch (e) { console.warn('TTS speak error', e); }
+                    }
+                    
+                    // Do NOT resume here if we require demographics first
+                    console.log('Stream complete (MAIN final) - isVoiceMode:', isVoiceMode, 'isVoiceProcessing:', isVoiceProcessing, 'demographicsGatePending:', demographicsGatePending);
+                    if (!demographicsGatePending) {
+                        clearProcessingWatchdog();
+                        if (isVoiceMode) {
+                            setTimeout(() => {
+                                console.log('About to resume voice recognition - isVoiceMode:', isVoiceMode);
+                                isVoiceProcessing = false;
+                                if (isVoiceMode && !voiceRecognition?.recognizing) {
+                                    console.log('Resuming voice recognition after AI response (streaming)');
+                                    try {
+                                        startVoiceRecognition();
+                                    } catch (error) {
+                                        console.error('Error resuming voice recognition (streaming):', error);
+                                        isVoiceProcessing = false;
+                                    }
+                                }
+                            }, 1000);
+                        } else {
+                            isVoiceProcessing = false;
+                        }
+                    }
+                    
                     // Dispatch event for logging purposes (if parent needs it)
                     dispatch('streamComplete', {
                         message: userInput,
@@ -155,11 +326,49 @@
                     if(chunk.content){
                         userDemographics.set(chunk.content);
                     }
+                    // Resume mic now that demographics arrived
+                    if (isVoiceMode && isVoiceProcessing && demographicsGatePending) {
+                        console.log('Demographics arrived - resuming mic');
+                        clearProcessingWatchdog();
+                        demographicsGatePending = false;
+                        isVoiceProcessing = false;
+                        try {
+                            startVoiceRecognition();
+                        } catch (error) {
+                            console.error('Error resuming after demographics:', error);
+                            isVoiceProcessing = false;
+                        }
+                    }
+                }
+                else if (chunk.type === 'final') {
+                    // This is the final chunk, resume voice recognition if needed
+                    console.log('Final chunk received (SECONDARY final) - checking voice mode');
+                    // Only resume if no gate
+                    if (!demographicsGatePending) {
+                        clearProcessingWatchdog();
+                        if (isVoiceMode) {
+                            setTimeout(() => {
+                                console.log('Auto-resuming voice recognition after final chunk (SECONDARY)');
+                                isVoiceProcessing = false;
+                                if (isVoiceMode && !voiceRecognition?.recognizing) {
+                                    try {
+                                        startVoiceRecognition();
+                                    } catch (error) {
+                                        console.error('Error resuming voice recognition (secondary final):', error);
+                                        isVoiceProcessing = false;
+                                    }
+                                }
+                            }, 1500);
+                        }
+                    }
                 }
             }).catch(error => {
                 handleResponseStart(); // Also handle on error
                 console.error('Stream error:', error);
 
+                clearProcessingWatchdog();
+                demographicsGatePending = false;
+                
                 // Create AI message for error if not created yet
                 if (!hasCreatedAiMessage) {
                     aiMessageId = Date.now() + 1;
@@ -182,6 +391,19 @@
                             feedback: false
                         };
                         messages = messages;
+                    }
+                }
+            }).finally(() => {
+                // Ensure streaming is marked as complete even if no final chunk
+                if (hasCreatedAiMessage && aiMessageId) {
+                    const messageIndex = messages.findIndex(m => m.id === aiMessageId);
+                    if (messageIndex !== -1 && messages[messageIndex].isStreaming) {
+                        console.log('[TTS] Marking stream as complete in finally block');
+                        messages[messageIndex] = {
+                            ...messages[messageIndex],
+                            isStreaming: false
+                        };
+                        messages = messages; // Trigger reactivity
                     }
                 }
             });
@@ -207,6 +429,38 @@
                         audio_error: data.audio_error
                     };
                     messages = [...messages, aiMessage]; // Add new message
+
+                    // TTS: speak non-streaming response
+                    if (ttsEnabled && ttsRef && aiMessage.text) {
+                        console.log('[TTS] Speaking non-streaming response, messageId:', aiMessage.id);
+                        try { 
+                            ttsRef.speak(String(aiMessage.text)); 
+                            lastSpokenMessageId = Number(aiMessage.id);
+                        } catch (e) { console.warn('TTS speak error', e); }
+                    }
+                    
+                    // Resume voice recognition after response
+                    console.log('Non-stream complete - isVoiceMode:', isVoiceMode, 'isVoiceProcessing:', isVoiceProcessing);
+                    clearProcessingWatchdog();
+                    if (!demographicsGatePending) {
+                        if (isVoiceMode) {
+                            setTimeout(() => {
+                                console.log('About to resume voice recognition (non-stream) - isVoiceMode:', isVoiceMode);
+                                isVoiceProcessing = false;
+                                if (isVoiceMode && !voiceRecognition?.recognizing) {
+                                    console.log('Resuming voice recognition after AI response (non-streaming)');
+                                    try {
+                                        startVoiceRecognition();
+                                    } catch (error) {
+                                        console.error('Error resuming voice recognition (non-streaming):', error);
+                                        isVoiceProcessing = false;
+                                    }
+                                }
+                            }, 1000);
+                        } else {
+                            isVoiceProcessing = false;
+                        }
+                    }
                     
                     // Dispatch event for logging purposes (if parent needs it)
                     dispatch('streamComplete', {
@@ -218,6 +472,8 @@
                     handleResponseStart();
                     console.error('Non-streaming API error:', error);
 
+                    clearProcessingWatchdog();
+                    
                     // Create error message
                     const errorMessage: TChatMessage = {
                         id: Date.now() + 1,
@@ -249,22 +505,160 @@
         }
     }
 
-    // Function for the sound wave button
+    // Voice recognition functions
     function handleSoundWaveClick() {
-        console.log('Sound wave button clicked');
-        showSoundWaveOverlay = true; // Show the overlay when button is clicked
+        console.log('Sound wave button clicked - current state:', { isVoiceMode, isVoiceProcessing });
+        if (isVoiceMode) {
+            if (isVoiceProcessing) {
+                // If stuck in processing, force resume
+                console.log('Force resuming voice recognition from processing state');
+                isVoiceProcessing = false;
+                startVoiceRecognition();
+            } else {
+                // Normal stop
+                stopVoiceRecognition();
+            }
+        } else {
+            startVoiceRecognition();
+        }
     }
 
-    // Function to close the overlay
-    function handleCloseOverlay() {
-        showSoundWaveOverlay = false;
+    function startVoiceRecognition() {
+        try {
+            console.log('startVoiceRecognition called - current state:', { isVoiceMode, isVoiceProcessing, hasExistingRecognition: !!voiceRecognition });
+            
+            // Stop any existing recognition first
+            if (voiceRecognition) {
+                try {
+                    voiceRecognition.stop();
+                } catch (e) {
+                    console.log('Error stopping existing recognition:', e);
+                }
+                voiceRecognition = null;
+            }
+            
+            // @ts-ignore
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                console.error('Speech recognition not supported');
+                return;
+            }
+
+            voiceRecognition = new SpeechRecognition();
+            voiceRecognition.continuous = true;
+            voiceRecognition.interimResults = true;
+            voiceRecognition.lang = 'en-US';
+
+            voiceRecognition.onstart = () => {
+                isVoiceMode = true;
+                console.log('Voice recognition started - isVoiceMode:', isVoiceMode);
+            };
+
+            voiceRecognition.onresult = (event: any) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+                
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                
+                voiceTranscript = finalTranscript || interimTranscript;
+                inputMessage = voiceTranscript;
+                
+                // Clear existing timer
+                if (silenceTimer) {
+                    clearTimeout(silenceTimer);
+                }
+                
+                // Set new timer for auto-submit after 3 seconds of silence
+                if (voiceTranscript.trim()) {
+                    silenceTimer = setTimeout(() => {
+                        if (voiceTranscript.trim() && !isVoiceProcessing && isVoiceMode) {
+                            console.log('Auto-submitting after silence:', voiceTranscript);
+                            // Set processing state before sending message
+                            isVoiceProcessing = true;
+                            sendMessage();
+                            // Clear transcript after sending
+                            voiceTranscript = '';
+                        }
+                    }, 3000);
+                }
+            };
+
+            voiceRecognition.onerror = (event: any) => {
+                console.error('Speech recognition error:', event.error);
+                
+                // Handle different error types
+                if (event.error === 'no-speech') {
+                    console.log('No speech detected - this is normal, continuing...');
+                    // Don't stop recognition for no-speech, it's normal
+                    return;
+                } else if (event.error === 'aborted') {
+                    console.log('Speech recognition aborted - this is normal');
+                    // Don't stop recognition for aborted, it's normal
+                    return;
+                } else if (event.error === 'network') {
+                    console.error('Network error in speech recognition');
+                    // Stop for network errors
+                    stopVoiceRecognition();
+                } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                    console.error('Microphone access denied');
+                    // Stop for permission errors
+                    stopVoiceRecognition();
+                } else {
+                    console.error('Unknown speech recognition error:', event.error);
+                    // Don't stop for unknown errors, let it continue
+                }
+            };
+
+            voiceRecognition.onend = () => {
+                console.log('Voice recognition ended - isVoiceMode:', isVoiceMode, 'isVoiceProcessing:', isVoiceProcessing);
+                if (isVoiceMode && !isVoiceProcessing) {
+                    // Only restart if not processing a message
+                    setTimeout(() => {
+                        if (isVoiceMode && !isVoiceProcessing && voiceRecognition) {
+                            console.log('Restarting voice recognition...');
+                            try {
+                                voiceRecognition.start();
+                            } catch (error) {
+                                console.error('Error restarting voice recognition:', error);
+                                // Reset state if restart fails
+                                isVoiceProcessing = false;
+                            }
+                        }
+                    }, 100);
+                }
+            };
+
+            voiceRecognition.start();
+        } catch (error) {
+            console.error('Error starting voice recognition:', error);
+        }
     }
 
-    // Function to save sound settings
-    function handleSaveSettings() {
-        console.log('Saving sound settings');
-        // Here you would implement the logic to save the settings
-        showSoundWaveOverlay = false;
+    function stopVoiceRecognition() {
+        console.log('Stopping voice recognition - isVoiceMode was:', isVoiceMode);
+        isVoiceMode = false;
+        isVoiceProcessing = false;
+        voiceTranscript = '';
+        clearProcessingWatchdog();
+        
+        if (silenceTimer) {
+            clearTimeout(silenceTimer);
+            silenceTimer = null;
+        }
+        
+        if (voiceRecognition) {
+            voiceRecognition.stop();
+            voiceRecognition = null;
+        }
+        
+        console.log('Voice recognition stopped - isVoiceMode now:', isVoiceMode);
     }
 
     async function startRecording() {
@@ -373,6 +767,14 @@
     // Add environment variable for message icon
     const SPEECH_RECOGNITION = import.meta.env.VITE_SPEECH_RECOGNITION === 'true';
     const STREAMING_OPTION = import.meta.env.VITE_STREAMING_OPTION === 'true'; // Default: false
+    const STREAMING_OPTION = import.meta.env.VITE_STREAMING_OPTION !== 'false'; // Default: true
+    
+    // Cleanup on component destroy
+    import { onDestroy } from 'svelte';
+    
+    onDestroy(() => {
+        stopVoiceRecognition();
+    });
 </script>
 
 <svelte:head>
@@ -381,7 +783,32 @@
 </svelte:head>
 
 <div class="ttm flex h-full">
-    <Header>Chatbot</Header>
+        <Header>
+            <div class="header-row">
+                <span>Chatbot</span>
+                <div class="tts-controls">
+                    <div class="tts-toggle">
+                        <label class="switch">
+                            <input type="checkbox" bind:checked={ttsEnabled}>
+                            <span class="slider"></span>
+                        </label>
+                        <span class="tts-label">TTS</span>
+                    </div>
+                    <button 
+                        class="mute-button {!ttsEnabled ? 'disabled' : ''}" 
+                        on:click={() => ttsMuted = !ttsMuted}
+                        title={ttsMuted ? 'Unmute' : 'Mute'}
+                        disabled={!ttsEnabled}
+                    >
+                        {#if ttsMuted}
+                            <i class="fas fa-volume-mute"></i>
+                        {:else}
+                            <i class="fas fa-volume-up"></i>
+                        {/if}
+                    </button>
+                </div>
+            </div>
+        </Header>
     <main bind:this={element} class="flex-1 overflow-y-auto h-full p-3">
         {#each messages as message}
             <Message {message} on:feedbackButtonClick={forwardFeedback} on:questionClick={(e) => dispatch('questionClick', e.detail)}/>
@@ -389,6 +816,8 @@
 
         <!-- Show progress message if we are waiting for a response from the backend -->
         {#if isWaitingForResponse}
+        <!-- Show progress message if the last message is from the user and no AI response yet -->
+        {#if messages.length && messages[messages.length - 1].isUser}
             <ProgressMessage/>
         {/if}
     </main>
@@ -404,7 +833,7 @@
                 {#if filteredSuggestions.length > 0}
                     <ul class="suggestions">
                         {#each filteredSuggestions as suggestion}
-                            <li on:click={() => selectSuggestion(suggestion)}>{suggestion}</li>
+                            <button class="suggestion-item" on:click={() => selectSuggestion(suggestion)}>{suggestion}</button>
                         {/each}
                     </ul>
                 {/if}
@@ -446,15 +875,12 @@
                         {:else}
                             <button 
                                 type="button"
-                                class="sound-wave-button"
+                                class="sound-wave-button {isVoiceMode ? 'active' : ''}"
                                 on:click={handleSoundWaveClick}
-                                title="Sound options"
+                                title={isVoiceMode ? (isVoiceProcessing ? 'Voice processing... (click to resume)' : 'Stop voice recognition') : 'Start voice recognition'}
                             >
-                                <div class="sound-wave-icon">
-                                    <span class="sound-wave-line"></span>
-                                    <span class="sound-wave-line"></span>
-                                    <span class="sound-wave-line"></span>
-                                    <span class="sound-wave-line"></span>
+                                <div class="voice-circle-container">
+                                    <div class="voice-circle {isVoiceMode ? (isVoiceProcessing ? 'processing' : 'spinning') : ''}"></div>
                                 </div>
                             </button>
                         {/if}
@@ -481,13 +907,7 @@
         </div>
     {/if}
 
-    <!-- Sound Wave Overlay -->
-    {#if showSoundWaveOverlay}
-        <SoundWaveOverlay 
-            on:close={handleCloseOverlay}
-            on:save={handleSaveSettings}
-        />
-    {/if}
+    <TTSPlayer bind:this={ttsRef} enabled={ttsEnabled} muted={ttsMuted} instructions={undefined} />
 </div>
 
 
@@ -545,14 +965,24 @@
         overflow-y: auto;
     }
 
-    .suggestions li {
+    .suggestion-item {
+        display: block;
+        width: 100%;
         padding: 4px 8px;
+        border: none;
+        background: none;
         cursor: pointer;
         font-size: 0.8rem;
+        text-align: left;
+        border-bottom: 1px solid #eee;
     }
 
-    .suggestions li:hover {
+    .suggestion-item:hover {
         background-color: #f0f0f0;
+    }
+    
+    .suggestion-item:last-child {
+        border-bottom: none;
     }
 
     /* Voice recognition section styling */
@@ -613,30 +1043,130 @@
     .sound-wave-button:active {
         transform: scale(0.95);
     }
-
-    .sound-wave-icon {
+    
+    .sound-wave-button.active {
+        background-color: #e3f2fd;
+        border: 2px solid #1976d2;
+    }
+    
+    .voice-circle-container {
+        position: relative;
         display: flex;
         align-items: center;
-        height: 20px;
-        gap: 3px;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        min-width: 40px;
+        min-height: 40px;
+    }
+    
+    .voice-circle {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: linear-gradient(
+            110deg,
+            #063970 0%,
+            #1e90ff 20%,
+            #63a4ff 40%,
+            #2ecc71 50%,
+            #1e90ff 60%,
+            #63a4ff 80%,
+            #063970 100%
+        );
+        background-size: 300% 300%;
+        position: relative;
+        transition: all 0.3s ease;
+        box-shadow: 
+            inset -2px -2px 4px rgba(0, 0, 0, 0.6),
+            inset 2px 2px 4px rgba(255, 255, 255, 0.4),
+            0 0 5px rgba(0, 0, 0, 0.3),
+            0 0 10px rgba(30, 144, 255, 0.2);
+        /* Fallback solid color in case gradient doesn't work */
+        background-color: #1976d2;
+    }
+    
+    .voice-circle::before {
+        content: '';
+        position: absolute;
+        top: -6px;
+        left: -6px;
+        width: 40px;
+        height: 40px;
+        border: 2px solid transparent;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+    }
+    
+    .voice-circle.spinning {
+        animation: 
+            rotate 6s linear infinite,
+            moveGradient 3s ease infinite,
+            float 3s ease-in-out infinite;
+    }
+    
+    .voice-circle.spinning::before {
+        border: 2px solid transparent;
+        border-top: 2px solid #4caf50;
+        border-right: 2px solid #4caf50;
+        animation: spin-reverse 3s linear infinite;
+    }
+    
+    .voice-circle.processing {
+        animation: 
+            pulse 1.5s ease-in-out infinite,
+            moveGradient 2s ease infinite;
+        opacity: 0.8;
+    }
+    
+    .voice-circle.processing::before {
+        border: 2px solid #ff9800;
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes moveGradient {
+        0% {
+            background-position: 0% 50%;
+        }
+        50% {
+            background-position: 100% 50%;
+        }
+        100% {
+            background-position: 0% 50%;
+        }
+    }
+    
+    @keyframes spin-reverse {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(-360deg);
+        }
+    }
+    
+    @keyframes rotate {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+    
+    @keyframes float {
+        0% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-2px);
+        }
+        100% {
+            transform: translateY(0);
+        }
     }
 
-    .sound-wave-line {
-        display: inline-block;
-        width: 2px;
-        background-color: #555;
-        border-radius: 1px;
-    }
 
-    .sound-wave-line:nth-child(1) { height: 6px; }
-    .sound-wave-line:nth-child(2) { height: 10px; }
-    .sound-wave-line:nth-child(3) { height: 10px; }
-    .sound-wave-line:nth-child(4) { height: 6px; }
-
-    .voice-wave-container i {
-        color: #555;
-        font-size: 18px;
-    }
 
     .voice-wave {
         display: flex;
@@ -741,5 +1271,73 @@
         100% {
             transform: rotate(360deg);
         }
+    }
+
+    .header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 8px;
+    }
+    .tts-controls {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .tts-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .tts-label { font-size: 12px; color: #555; }
+    
+    .mute-button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        color: #555;
+        font-size: 14px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+    }
+    
+    .mute-button:not(.disabled):hover {
+        background-color: #f0f0f0;
+        color: #333;
+    }
+    
+    .mute-button:not(.disabled):active {
+        transform: scale(0.95);
+    }
+    
+    .mute-button.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .mute-button:disabled {
+        pointer-events: none;
+    }
+    .switch { position: relative; display: inline-block; width: 42px; height: 22px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .2s; border-radius: 34px; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px; background-color: white; transition: .2s; border-radius: 50%; }
+    input:checked + .slider { background-color: #4caf50; }
+    input:checked + .slider:before { transform: translateX(20px); }
+    
+    /* Muted state styling */
+    .mute-button i.fa-volume-mute {
+        color: #ff5722;
+    }
+    
+    .mute-button i.fa-volume-up {
+        color: #4caf50;
     }
 </style>
