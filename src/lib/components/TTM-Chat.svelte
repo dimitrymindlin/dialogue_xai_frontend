@@ -32,7 +32,8 @@
     let ttsMuted: boolean = false;
     let ttsRef: any = null;
     let lastSpokenMessageId: number | null = null;
-    
+    let isTTSAudioPlaying: boolean = false; // gate STT resume while TTS is speaking
+    let instructions: string = "Speak in a cheerful and positive tone, speak at 3x speed";
     // Debug TTS state changes
     $: console.log('[TTS] Toggle state changed:', ttsEnabled, 'ttsRef available:', !!ttsRef, 'muted:', ttsMuted);
 
@@ -45,7 +46,8 @@
         processingWatchdog = setTimeout(() => {
             try {
                 if (isVoiceMode && isVoiceProcessing) {
-                    if (!demographicsGatePending) {
+                    // Also ensure TTS playback has finished before resuming
+                    if (!demographicsGatePending && !isTTSAudioPlaying) {
                         console.warn('Processing watchdog fired - forcing resume');
                         isVoiceProcessing = false;
                         startVoiceRecognition();
@@ -112,8 +114,8 @@
         if (!lastMessage.isUser && !lastMessage.isStreaming && isVoiceMode && isVoiceProcessing) {
             console.log('Detected AI message completion, scheduling voice resume');
             setTimeout(() => {
-                console.log('Reactive timeout executing - isVoiceMode:', isVoiceMode, 'isVoiceProcessing:', isVoiceProcessing);
-                if (isVoiceMode && isVoiceProcessing) {
+                console.log('Reactive timeout executing - isVoiceMode:', isVoiceMode, 'isVoiceProcessing:', isVoiceProcessing, 'isTTSAudioPlaying:', isTTSAudioPlaying);
+                if (isVoiceMode && isVoiceProcessing && !isTTSAudioPlaying) {
                     console.log('Auto-resuming voice recognition after message completion (reactive)');
                     isVoiceProcessing = false;
                     try {
@@ -122,12 +124,14 @@
                         console.error('Error in reactive voice resume:', error);
                         isVoiceProcessing = false;
                     }
+                } else if (isTTSAudioPlaying) {
+                    console.log('TTS is playing, deferring voice resume (reactive)');
                 }
             }, 2000);
         }
     }
 
-    // TTS: when toggle enabled, auto-speak the latest complete AI message
+    // TTS: when toggle enabled, auto-speak the latest complete AI message (ONLY for non-streaming messages)
     $: if (ttsEnabled && messages && messages.length > 0) {
         console.log('[TTS] Reactive check - enabled:', ttsEnabled, 'messages count:', messages.length, 'ttsRef:', !!ttsRef);
         // Find latest AI message - include streaming ones that have accumulated text
@@ -140,14 +144,24 @@
         });
         console.log('[TTS] Latest AI message:', latestAi ? { id: latestAi.id, textLength: latestAi.text?.length, isStreaming: latestAi.isStreaming } : 'none');
         console.log('[TTS] Last spoken ID:', lastSpokenMessageId);
+        
+        // ONLY speak if this message was NOT processed by streaming TTS
         if (latestAi && Number(latestAi.id) !== lastSpokenMessageId && ttsRef) {
-            console.log('[TTS] About to speak message ID:', latestAi.id);
-            try {
-                ttsRef.speak(String(latestAi.text));
-                lastSpokenMessageId = Number(latestAi.id);
-                console.log('[TTS] Updated lastSpokenMessageId to:', lastSpokenMessageId);
-            } catch (e) {
-                console.warn('TTS reactive speak error', e);
+            // Check if this message was created via streaming (has been processed already)
+            const wasStreamingMessage = latestAi.text && latestAi.text.includes('<') && latestAi.text.includes('>');
+            
+            if (!wasStreamingMessage) {
+                console.log('[TTS] About to speak NON-STREAMING message ID:', latestAi.id);
+                try {
+                    ttsRef.speak(String(latestAi.text));
+                    lastSpokenMessageId = Number(latestAi.id);
+                    console.log('[TTS] Updated lastSpokenMessageId to:', lastSpokenMessageId);
+                } catch (e) {
+                    console.warn('TTS reactive speak error', e);
+                }
+            } else {
+                console.log('[TTS] Skipping streaming message (already processed):', latestAi.id);
+                lastSpokenMessageId = Number(latestAi.id); // Mark as processed to avoid future attempts
             }
         }
     }
@@ -230,6 +244,12 @@
                     messages[messageIndex].text += chunk.content;
                     messages[messageIndex].isStreaming = true;
                     messages = messages; // Trigger reactivity
+                    
+                    // TTS: Add streaming chunk for real-time synthesis
+                    if (ttsEnabled && ttsRef && chunk.content) {
+                        console.log('[TTS] Adding streaming chunk:', chunk.content.length, 'chars');
+                        ttsRef.addStreamingText(chunk.content);
+                    }
                 } else if (chunk.type === 'final') {
                     // Final update with complete data
                     messages[messageIndex] = {
@@ -246,13 +266,16 @@
                     };
                     messages = messages; // Trigger reactivity
                     
-                    // TTS: speak final AI content when enabled
-                    if (ttsEnabled && ttsRef && chunk.content) {
-                        console.log('[TTS] Speaking streaming final content, messageId:', aiMessageId);
+                    // TTS: Finish streaming and speak any remaining content
+                    if (ttsEnabled && ttsRef) {
+                        console.log('[TTS] Finishing streaming for messageId:', aiMessageId);
                         try { 
-                            ttsRef.speak(String(chunk.content)); 
-                            if (aiMessageId) { lastSpokenMessageId = Number(aiMessageId); }
-                        } catch (e) { console.warn('TTS speak error', e); }
+                            ttsRef.finishStreaming();
+                            if (aiMessageId) { 
+                                lastSpokenMessageId = Number(aiMessageId);
+                                console.log('[TTS] Streaming finished, marked as spoken:', lastSpokenMessageId);
+                            }
+                        } catch (e) { console.warn('TTS finish streaming error', e); }
                     }
                     
                     // Do NOT resume here if we require demographics first
@@ -298,8 +321,18 @@
                     if(chunk.content){
                         userDemographics.set(chunk.content);
                     }
+                    
+                    // TTS: Also finish streaming when demographics arrive (end of response)
+                    if (ttsEnabled && ttsRef) {
+                        console.log('[TTS] Demographics received, finishing any remaining streaming');
+                        try {
+                            ttsRef.finishStreaming();
+                        } catch (e) {
+                            console.warn('TTS finish on demographics error', e);
+                        }
+                    }
                     // Resume mic now that demographics arrived
-                    if (isVoiceMode && isVoiceProcessing && demographicsGatePending) {
+                    if (isVoiceMode && isVoiceProcessing && demographicsGatePending && !isTTSAudioPlaying) {
                         console.log('Demographics arrived - resuming mic');
                         clearProcessingWatchdog();
                         demographicsGatePending = false;
@@ -316,7 +349,7 @@
                     // This is the final chunk, resume voice recognition if needed
                     console.log('Final chunk received (SECONDARY final) - checking voice mode');
                     // Only resume if no gate
-                    if (!demographicsGatePending) {
+                    if (!demographicsGatePending && !isTTSAudioPlaying) {
                         clearProcessingWatchdog();
                         if (isVoiceMode) {
                             setTimeout(() => {
@@ -413,7 +446,7 @@
                     // Resume voice recognition after response
                     console.log('Non-stream complete - isVoiceMode:', isVoiceMode, 'isVoiceProcessing:', isVoiceProcessing);
                     clearProcessingWatchdog();
-                    if (!demographicsGatePending) {
+                    if (!demographicsGatePending && !isTTSAudioPlaying) {
                         if (isVoiceMode) {
                             setTimeout(() => {
                                 console.log('About to resume voice recognition (non-stream) - isVoiceMode:', isVoiceMode);
@@ -586,12 +619,12 @@
             };
 
             voiceRecognition.onend = () => {
-                console.log('Voice recognition ended - isVoiceMode:', isVoiceMode, 'isVoiceProcessing:', isVoiceProcessing);
+                console.log('Voice recognition ended - isVoiceMode:', isVoiceMode, 'isVoiceProcessing:', isVoiceProcessing, 'isTTSAudioPlaying:', isTTSAudioPlaying);
                 if (isVoiceMode && !isVoiceProcessing) {
-                    // Only restart if not processing a message
+                    // Only restart if not processing a message and TTS not playing
                     setTimeout(() => {
-                        if (isVoiceMode && !isVoiceProcessing && voiceRecognition) {
-                            console.log('Restarting voice recognition...');
+                        if (isVoiceMode && !isVoiceProcessing && !isTTSAudioPlaying && voiceRecognition) {
+                            console.log('Restarting voice recognition after 3s idle...');
                             try {
                                 voiceRecognition.start();
                             } catch (error) {
@@ -599,8 +632,10 @@
                                 // Reset state if restart fails
                                 isVoiceProcessing = false;
                             }
+                        } else if (isTTSAudioPlaying) {
+                            console.log('Deferring recognition restart because TTS is still playing');
                         }
-                    }, 100);
+                    }, 3000);
                 }
             };
 
@@ -873,7 +908,23 @@
         </div>
     {/if}
 
-    <TTSPlayer bind:this={ttsRef} enabled={ttsEnabled} muted={ttsMuted} instructions={undefined} />
+    <TTSPlayer 
+        bind:this={ttsRef} 
+        enabled={ttsEnabled} 
+        muted={ttsMuted} 
+        instructions={instructions}
+        on:ttsstart={() => { isTTSAudioPlaying = true; }}
+        on:ttsend={() => { 
+            // All TTS playback finished
+            isTTSAudioPlaying = false;
+            // If voice recognition was waiting for TTS and demographics gate is clear, resume
+            if (isVoiceMode && isVoiceProcessing && !demographicsGatePending) {
+                console.log('[TTS] Finished, resuming voice recognition');
+                isVoiceProcessing = false;
+                try { startVoiceRecognition(); } catch (e) { console.error('Resume after TTS error:', e); }
+            }
+        }}
+    />
 </div>
 
 
