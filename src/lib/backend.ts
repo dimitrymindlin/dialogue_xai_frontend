@@ -95,16 +95,15 @@ export default {
             });
         },
 
-        update_ml_knowledge: (ml_knowledge: string) => {
-          
-            console.log('Trying update_ml_knowledge with user_id:', user_id);
+        update_user_model: (ml_knowledge: string, cognitive_state: string) => {
+            console.log('Trying update_user_model with user_id:', user_id);
             console.log('Backend URL:', PUBLIC_BACKEND_URL);
+            console.log('ML Knowledge:', ml_knowledge, 'Cognitive State:', cognitive_state);
             
-
-            return fetch(`${PUBLIC_BACKEND_URL}update_ml_knowledge`, {
+            return fetch(`${PUBLIC_BACKEND_URL}update_user_model`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id, ml_knowledge })
+                body: JSON.stringify({ user_id, ml_knowledge, cognitive_state })
             });
         },
         set_user_prediction: (experiment_phase: string, datapoint_count: number, user_prediction: string) => fetch(PUBLIC_BACKEND_URL + 'set_user_prediction', {
