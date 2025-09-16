@@ -17,11 +17,11 @@
 
     // Replace the placeholder in the questions with the actual value
     // Do this for both general_questions and feature_questions
-    $: general_questions = general_questions.map(q => ({
+    $: general_questions = (general_questions || []).map(q => ({
         ...q,
         question: q.question.replace('[current prediction]', current_prediction)
     }));
-    $: feature_questions = feature_questions.map(q => ({
+    $: feature_questions = (feature_questions || []).map(q => ({
         ...q,
         question: q.question.replace('[current prediction]', current_prediction)
     }));
@@ -70,7 +70,7 @@
               type="feature"
               question={question.question}
               questionId={question.q_id}
-              featureOptions={feature_questions_dropdown}
+              featureOptions={feature_questions_dropdown || []}
               on:action={handleAction}
               isActive={activeQuestion === question.q_id}
             />

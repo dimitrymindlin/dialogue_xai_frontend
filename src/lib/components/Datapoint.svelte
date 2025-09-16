@@ -15,7 +15,7 @@
 
     // Normalize a string by removing spaces and converting to lower case for comparison
     function normalizeString(str: string): string {
-        return str.replace(/\s+/g, '').toLowerCase();
+        return str ? str.replace(/\s+/g, '').toLowerCase() : '';
     }
 
     // Robust key lookup function that handles case mismatches and variations
