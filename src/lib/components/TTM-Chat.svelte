@@ -8,6 +8,10 @@
     import {createEventDispatcher} from 'svelte';
     import SubmitButton from "$lib/components/SubmitButton.svelte";
     import backend from '$lib/backend'; // Add backend import
+    import {getDatasetConfig} from '$lib/dataset-configs';
+    import {env} from '$env/dynamic/public';
+    const PUBLIC_BACKEND_URL = env.PUBLIC_BACKEND_URL;
+    import { userDemographics } from '$lib/stores';
     import { userDemographics } from '$lib/stores';
 
     export let messages: TChatMessage[] = [];
@@ -22,6 +26,8 @@
     let audioChunks: Blob[] = [];
     let isProcessingSpeech = false;
     let hasText = false; // New variable to track if there's text in the input
+    let showSoundWaveOverlay = false; // New variable to control overlay visibility
+    let isWaitingForResponse = false; // New variable to track if we are waiting for a backend response
     let isVoiceMode = false; // Voice recognition mode
     let voiceRecognition: any = null;
     let voiceTranscript = '';
@@ -37,6 +43,56 @@
     let instructions: string = "Speak in a cheerful and positive tone, speak at 3x speed";
     // Debug TTS state changes
     $: console.log('[TTS] Toggle state changed:', ttsEnabled, 'ttsRef available:', !!ttsRef, 'muted:', ttsMuted);
+    let isVoiceMode = false; // Voice recognition mode
+    let voiceRecognition: any = null;
+    let voiceTranscript = '';
+    let silenceTimer: any = null;
+    let isVoiceProcessing = false;
+    let processingWatchdog: any = null;
+    let demographicsGatePending = false; // Resume mic only after demographics chunk
+    let ttsEnabled: boolean = false;
+    let ttsMuted: boolean = false;
+    let ttsRef: any = null;
+    let lastSpokenMessageId: number | null = null;
+    let isTTSAudioPlaying: boolean = false; // gate STT resume while TTS is speaking
+    let instructions: string = "Speak in a cheerful and positive tone, speak at 3x speed";
+    // Debug TTS state changes
+    $: console.log('[TTS] Toggle state changed:', ttsEnabled, 'ttsRef available:', !!ttsRef, 'muted:', ttsMuted);
+
+    // Get dataset-specific configuration including chat suggestions
+    $: datasetConfig = getDatasetConfig(dataset);
+    $: chatSuggestions = datasetConfig.chatSuggestions;
+    function startProcessingWatchdog() {
+        if (processingWatchdog) {
+            clearTimeout(processingWatchdog);
+            processingWatchdog = null;
+        }
+        // Force recovery if we get stuck in processing
+        processingWatchdog = setTimeout(() => {
+            try {
+                if (isVoiceMode && isVoiceProcessing) {
+                    // Also ensure TTS playback has finished before resuming
+                    if (!demographicsGatePending && !isTTSAudioPlaying) {
+                        console.warn('Processing watchdog fired - forcing resume');
+                        isVoiceProcessing = false;
+                        startVoiceRecognition();
+                    } else {
+                        console.warn('Processing watchdog fired but demographics not received yet; keeping mic paused');
+                    }
+                }
+            } catch (e) {
+                console.error('Watchdog resume error:', e);
+                isVoiceProcessing = false;
+            }
+        }, 8000);
+    }
+
+    function clearProcessingWatchdog() {
+        if (processingWatchdog) {
+            clearTimeout(processingWatchdog);
+            processingWatchdog = null;
+        }
+    }
 
     function startProcessingWatchdog() {
         if (processingWatchdog) {
@@ -180,6 +236,7 @@
 
     function sendMessage() {
         if (inputMessage.trim() === '') return;
+
         
         // Pause voice recognition during processing but keep voice mode active
         if (isVoiceMode) {
@@ -211,6 +268,24 @@
 
         const userInput = inputMessage;
         inputMessage = '';
+
+        // --- Start loading logic ---
+        let responseStarted = false;
+        const timer = setTimeout(() => {
+            if (!responseStarted) {
+                isWaitingForResponse = true;
+            }
+        }, 1000); // Show loading indicator after 1 second
+
+        const handleResponseStart = () => {
+            if (responseStarted) return; // Ensure this only runs once
+            responseStarted = true;
+            clearTimeout(timer);
+            isWaitingForResponse = false;
+        };
+        // --- End loading logic ---
+
+        voiceTranscript = '';
         voiceTranscript = '';
         
         if (STREAMING_OPTION) {
@@ -372,6 +447,9 @@
             }).catch(error => {
                 handleResponseStart(); // Also handle on error
                 console.error('Stream error:', error);
+
+                clearProcessingWatchdog();
+                demographicsGatePending = false;
                 clearProcessingWatchdog();
                 demographicsGatePending = false;
                 
@@ -477,6 +555,8 @@
                 .catch(error => {
                     handleResponseStart();
                     console.error('Non-streaming API error:', error);
+
+                    clearProcessingWatchdog();
                     clearProcessingWatchdog();
                     
                     // Create error message
@@ -703,6 +783,7 @@
                     
                     
                     //const apiUrl = `${base}/speech-to-text`;
+                    const apiUrl = PUBLIC_BACKEND_URL + "/speech-to-text";
                     const apiUrl = 'http://localhost:4555/speech-to-text';
                     console.log('Sending audio to API:', apiUrl);
                     
@@ -773,6 +854,7 @@
 
     // Add environment variable for message icon
     const SPEECH_RECOGNITION = import.meta.env.VITE_SPEECH_RECOGNITION === 'true';
+    const STREAMING_OPTION = import.meta.env.VITE_STREAMING_OPTION === 'true'; // Default: false
     const STREAMING_OPTION = import.meta.env.VITE_STREAMING_OPTION !== 'false'; // Default: true
     
     // Cleanup on component destroy
@@ -820,6 +902,8 @@
             <Message {message} on:feedbackButtonClick={forwardFeedback} on:questionClick={(e) => dispatch('questionClick', e.detail)}/>
         {/each}
 
+        <!-- Show progress message if we are waiting for a response from the backend -->
+        {#if isWaitingForResponse}
         <!-- Show progress message if the last message is from the user and no AI response yet -->
         {#if messages.length && messages[messages.length - 1].isUser}
             <ProgressMessage/>
