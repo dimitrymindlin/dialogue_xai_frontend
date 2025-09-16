@@ -12,6 +12,7 @@
     import {env} from '$env/dynamic/public';
     const PUBLIC_BACKEND_URL = env.PUBLIC_BACKEND_URL;
     import { userDemographics } from '$lib/stores';
+    import { userDemographics } from '$lib/stores';
 
     export let messages: TChatMessage[] = [];
     let element: HTMLElement;
@@ -42,10 +43,57 @@
     let instructions: string = "Speak in a cheerful and positive tone, speak at 3x speed";
     // Debug TTS state changes
     $: console.log('[TTS] Toggle state changed:', ttsEnabled, 'ttsRef available:', !!ttsRef, 'muted:', ttsMuted);
+    let isVoiceMode = false; // Voice recognition mode
+    let voiceRecognition: any = null;
+    let voiceTranscript = '';
+    let silenceTimer: any = null;
+    let isVoiceProcessing = false;
+    let processingWatchdog: any = null;
+    let demographicsGatePending = false; // Resume mic only after demographics chunk
+    let ttsEnabled: boolean = false;
+    let ttsMuted: boolean = false;
+    let ttsRef: any = null;
+    let lastSpokenMessageId: number | null = null;
+    let isTTSAudioPlaying: boolean = false; // gate STT resume while TTS is speaking
+    let instructions: string = "Speak in a cheerful and positive tone, speak at 3x speed";
+    // Debug TTS state changes
+    $: console.log('[TTS] Toggle state changed:', ttsEnabled, 'ttsRef available:', !!ttsRef, 'muted:', ttsMuted);
 
     // Get dataset-specific configuration including chat suggestions
     $: datasetConfig = getDatasetConfig(dataset);
     $: chatSuggestions = datasetConfig.chatSuggestions;
+    function startProcessingWatchdog() {
+        if (processingWatchdog) {
+            clearTimeout(processingWatchdog);
+            processingWatchdog = null;
+        }
+        // Force recovery if we get stuck in processing
+        processingWatchdog = setTimeout(() => {
+            try {
+                if (isVoiceMode && isVoiceProcessing) {
+                    // Also ensure TTS playback has finished before resuming
+                    if (!demographicsGatePending && !isTTSAudioPlaying) {
+                        console.warn('Processing watchdog fired - forcing resume');
+                        isVoiceProcessing = false;
+                        startVoiceRecognition();
+                    } else {
+                        console.warn('Processing watchdog fired but demographics not received yet; keeping mic paused');
+                    }
+                }
+            } catch (e) {
+                console.error('Watchdog resume error:', e);
+                isVoiceProcessing = false;
+            }
+        }, 8000);
+    }
+
+    function clearProcessingWatchdog() {
+        if (processingWatchdog) {
+            clearTimeout(processingWatchdog);
+            processingWatchdog = null;
+        }
+    }
+
     function startProcessingWatchdog() {
         if (processingWatchdog) {
             clearTimeout(processingWatchdog);
@@ -238,6 +286,7 @@
         // --- End loading logic ---
 
         voiceTranscript = '';
+        voiceTranscript = '';
         
         if (STREAMING_OPTION) {
             // Use streaming API
@@ -401,6 +450,8 @@
 
                 clearProcessingWatchdog();
                 demographicsGatePending = false;
+                clearProcessingWatchdog();
+                demographicsGatePending = false;
                 
                 // Create AI message for error if not created yet
                 if (!hasCreatedAiMessage) {
@@ -505,6 +556,7 @@
                     handleResponseStart();
                     console.error('Non-streaming API error:', error);
 
+                    clearProcessingWatchdog();
                     clearProcessingWatchdog();
                     
                     // Create error message
@@ -732,6 +784,7 @@
                     
                     //const apiUrl = `${base}/speech-to-text`;
                     const apiUrl = PUBLIC_BACKEND_URL + "/speech-to-text";
+                    const apiUrl = 'http://localhost:4555/speech-to-text';
                     console.log('Sending audio to API:', apiUrl);
                     
                     
