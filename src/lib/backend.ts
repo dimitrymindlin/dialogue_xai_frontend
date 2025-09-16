@@ -1,6 +1,7 @@
 import { env } from '$env/dynamic/public';
 
 const PUBLIC_BACKEND_URL = env.PUBLIC_BACKEND_URL;
+const SHOW_USER_MODEL_PANEL = env.PUBLIC_SHOW_USER_MODEL_PANEL;
 
 export default {
     xai: (user_id: string, study_group = 'A', user_ml_knowledge = "low") => ({
@@ -36,7 +37,11 @@ export default {
         get_user_message_response_stream: (message: string, onChunk: (chunk: any) => void) => {
             return fetch(PUBLIC_BACKEND_URL + "get_response_nl" + "?user_id=" + user_id, {
                 method: "POST",
-                body: JSON.stringify({message, streaming: true})
+                body: JSON.stringify({
+                    message, 
+                    streaming: true,
+                    show_user_model_panel: SHOW_USER_MODEL_PANEL === 'true'
+                })
             }).then(async response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -52,28 +57,22 @@ export default {
                 let buffer = '';
                 
                 while (true) {
-                    const { done, value } = await reader.read();
-                    
-                    if (done) {
-                        break;
-                    }
-                    
-                    buffer += decoder.decode(value, { stream: true });
-                    
-                    // Process complete SSE messages
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop() || ''; // Keep incomplete line in buffer
-                    
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const data = line.slice(6);
-                            if (data.trim()) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, {stream: true});
+                    const parts = buffer.split('\n\n');
+                    buffer = parts.pop() || ''; // Keep the last partial line in buffer
+
+                    for (const part of parts) {
+                        if (part.startsWith('data:')) {
+                            const jsonString = part.substring(5).trim();
+                            if (jsonString) {
                                 try {
-                                    const parsed = JSON.parse(data);
-                                    console.log('Stream chunk received:', parsed);
-                                    onChunk(parsed);
+                                    const chunk = JSON.parse(jsonString);
+                                    onChunk(chunk);
                                 } catch (e) {
-                                    console.error('Error parsing SSE data:', e, data);
+                                    console.error("Error parsing stream chunk:", e, "Chunk:", jsonString);
                                 }
                             }
                         }
@@ -93,6 +92,18 @@ export default {
                         }
                     }
                 }
+            });
+        },
+
+        update_user_model: (ml_knowledge: string, cognitive_state: string) => {
+            console.log('Trying update_user_model with user_id:', user_id);
+            console.log('Backend URL:', PUBLIC_BACKEND_URL);
+            console.log('ML Knowledge:', ml_knowledge, 'Cognitive State:', cognitive_state);
+            
+            return fetch(`${PUBLIC_BACKEND_URL}update_user_model`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id, ml_knowledge, cognitive_state })
             });
         },
         set_user_prediction: (experiment_phase: string, datapoint_count: number, user_prediction: string) => fetch(PUBLIC_BACKEND_URL + 'set_user_prediction', {

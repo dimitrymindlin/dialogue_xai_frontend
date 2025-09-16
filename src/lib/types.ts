@@ -74,6 +74,26 @@ type TTestOrTeaching = 'test' | 'teaching' | 'final-test' | 'intro-test';
 
 type TInteractiveOrStatic = 'static' | 'interactive' | 'chat';
 
+export type TStudyGroup = 'static' | 'chat' | 'tool' | 'tool_ecai' | null;
+
+export type TPrediction = {
+    value: string;
+    confidence: number;
+};
+
+export type TDemographicCategory = {
+    main_prediction: TPrediction;
+    alternative_predictions: TPrediction[];
+};
+
+export type TUserDemographics = {
+    [category: string]: TDemographicCategory | string;
+};
+
+export type TcomprehensionResult = {
+    correct: boolean;
+};
+
 export type {
     TChatMessage,
     TDatapointResult,

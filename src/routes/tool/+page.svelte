@@ -12,6 +12,7 @@
     import backend from '$lib/backend';
     import type {PageData} from './$types';
     import {base} from '$app/paths';
+    import { currentUserId } from '$lib/stores';
 
     /**
      * Data provided by the `+page.ts` load function in the same folder
@@ -33,6 +34,8 @@
     let true_label: string = String(data.datapoint.true_label);
     let ml_label_prediction: string = String(data.datapoint.ml_prediction);
     let user_id: string = data.user_id;
+    console.log('Setting currentUserId store to:', user_id);
+    currentUserId.set(user_id);
     let new_datapoint: TDatapoint;
     //-----------------------------------------------------------------
 
