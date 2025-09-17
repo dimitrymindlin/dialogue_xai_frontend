@@ -45,7 +45,7 @@
     
     $: questions = [
         'The task was easy.',
-        datasetConfig.understandingQuestion,
+        study_group === 'baseline' ? datasetConfig.understandingQuestionBaseline : datasetConfig.understandingQuestion,
         'I swim across the Atlantic Ocean every morning.',
         'I am confident in my predictions.',
         'I am not sure about my predictions.',

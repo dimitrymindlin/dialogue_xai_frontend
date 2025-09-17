@@ -7,6 +7,7 @@
 
     export let user_id: string;
     export let dataset: string = env.PUBLIC_DATASET_NAME || 'adult';
+    export let studyGroup: string;
 
     const dispatch = createEventDispatcher();
 
@@ -44,7 +45,18 @@
                 rules: "I found that the model uses... I think the model distinguishes by...",
                 unexpected: "It was unexpected that ... I did not understand ..."
             },
-            title: "Almost done! <br> Here are <b>three final questions</b> about your <b>model understanding</b>."
+            title: "Almost done! <br> Here are <b>three final questions</b> about your <b>model understanding</b>.",
+            titleBaseline: "Almost done! <br> Here are <b>three final questions</b> about your <b>experience predicting the model</b>.",
+            questionsBaseline: [
+                "1. You have seen different people and their attributes. Which attribute did you <b>notice most often</b> when the model made its decisions?",
+                "2. Which attribute seemed to have <b>little effect</b> on the model's predictions?<br>",
+                "3. What <b>patterns</b> did you notice in the model's predictions? Based on what you observed, what patterns could you spot?",
+                "4. (Optional) Was there anything <b>surprising or unexpected</b> about the model's predictions? Or anything you found difficult to predict?"
+            ],
+            placeholdersBaseline: {
+                rules: "I noticed that the model often predicted... I think the model tends to...",
+                unexpected: "It was unexpected that the model... I found it difficult to predict when..."
+            }
         },
         diabetes: {
             questions: [
@@ -75,12 +87,26 @@
                 rules: "I found that the model uses... I think the model distinguishes by...",
                 unexpected: "It was unexpected that ... I did not understand ..."
             },
-            title: "Almost done! <br> Here are <b>three final questions</b> about your <b>understanding of the diabetes prediction model</b>."
+            title: "Almost done! <br> Here are <b>three final questions</b> about your <b>understanding of the diabetes prediction model</b>.",
+            titleBaseline: "Almost done! <br> Here are <b>three final questions</b> about your <b>experience predicting the model</b>.",
+            questionsBaseline: [
+                "1. The model made predictions based on the data it was trained with. Which attribute did you <b>notice most often</b> when the model made its diabetes predictions?",
+                "2. Which attribute seemed to have <b>little effect</b> on the model's diabetes predictions?",
+                "3. What <b>patterns</b> did you notice in the model's diabetes predictions? Based on what you observed, what patterns could you spot?",
+                "4. (Optional) Was there anything <b>surprising or unexpected</b> about the model's predictions? Or anything you found difficult to predict?"
+            ],
+            placeholdersBaseline: {
+                rules: "I noticed that the model often predicted... I think the model tends to...",
+                unexpected: "It was unexpected that the model... I found it difficult to predict when..."
+            }
         }
     };
 
-    // Select the right configuration based on the dataset
+    // Select the right configuration based on the dataset and study group
     const config = datasetConfigs[dataset] || datasetConfigs.adult;
+    $: questions = studyGroup === 'baseline' ? config.questionsBaseline : config.questions;
+    $: title = studyGroup === 'baseline' ? config.titleBaseline : config.title;
+    $: placeholders = studyGroup === 'baseline' ? config.placeholdersBaseline : config.placeholders;
 
     // Validate form before submitting
     function validateForm() {
@@ -104,7 +130,7 @@
                 },
                 body: JSON.stringify({
                     user_id: user_id,
-                    questions: config.questions,
+                    questions: questions,
                     answers: [most_imp_val, lest_imp_val, decision_rules_text, unexpedted_text],
                     correct_answers: config.correctAnswers,
                     questionnaire_name: 'understanding'
@@ -119,10 +145,10 @@
     <!-- https://www.skeleton.dev/components/steppers -->
     <Stepper stepTerm="Final Test">
         <Step>
-            <h1 class="center-text text-xl">{@html config.title}</h1>
+            <h1 class="center-text text-xl">{@html title}</h1>
             <div class="flex-container">
                 <label class="label text-center flex-item">
-                    <span>{@html config.questions[0]}</span>
+                    <span>{@html questions[0]}</span>
                     <select bind:value={most_imp_val} class="select py-1">
                         <option value="" selected>- Select -</option>
                         {#each config.options as option, i}
@@ -131,7 +157,7 @@
                     </select>
                 </label>
                 <label class="label text-center flex-item">
-                    <span>{@html config.questions[1]}</span>
+                    <span>{@html questions[1]}</span>
                     <select bind:value={lest_imp_val} class="select py-1">
                         <option value="" selected>- Select -</option>
                         {#each config.options as option, i}
@@ -141,13 +167,13 @@
                 </label>
             </div>
             <br>
-            <span>{@html config.questions[2]}</span>
+            <span>{@html questions[2]}</span>
             <textarea bind:value={decision_rules_text} class="textarea-full-width"
-                      placeholder={config.placeholders.rules}></textarea>
+                      placeholder={placeholders.rules}></textarea>
             <br>
-            <span>{@html config.questions[3]}</span>
+            <span>{@html questions[3]}</span>
             <textarea bind:value={unexpedted_text} class="textarea-full-width"
-                      placeholder={config.placeholders.unexpected}></textarea>
+                      placeholder={placeholders.unexpected}></textarea>
             <div class="button-container">
                 <SubmitButton next={onComplete} label="Submit" customStyle="padding: 15px; margin-top: 10px;"/>
             </div>

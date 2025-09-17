@@ -3,13 +3,15 @@
     import {base} from '$app/paths';
     import backend from "$lib/backend";
     import {goto} from "$app/navigation";
-    import {userId} from '$lib/shared';
+    import {userId, studyGroup} from '$lib/shared';
     import { env } from '$env/dynamic/public';
     const PUBLIC_DATASET_NAME = env.PUBLIC_DATASET_NAME;
 
     let user_id;
+    let study_group;
     if (typeof window !== 'undefined') {
         user_id = userId.get();
+        study_group = studyGroup.get();
     }
 
     async function handleFeedbackSubmit(event) {
@@ -38,11 +40,19 @@
 <div class="center-page">
     <h1 class="center-text text-xl"><b>Thank you for your participation!</b></h1>
 
-    <h1 class="center-text text-xl">
-        By participating, you help to <b>bridge the gap between AI and humans.</b> <br>
-        With our research project we aim to understand how different people <b>understand the <br>
-        predictions of machine learning models</b> in order to <b>foster trust in AI and transparency.</b> <br> <br>
-    </h1>
+{#if study_group === 'baseline'}
+        <h1 class="center-text text-xl">
+            By participating, you help to <b>bridge the gap between AI and humans.</b> <br>
+            With our research project we aim to understand how different people <b>predict and interact with <br>
+            machine learning models</b> in order to <b>foster trust in AI and transparency.</b> <br> <br>
+        </h1>
+    {:else}
+        <h1 class="center-text text-xl">
+            By participating, you help to <b>bridge the gap between AI and humans.</b> <br>
+            With our research project we aim to understand how different people <b>understand the <br>
+            predictions of machine learning models</b> in order to <b>foster trust in AI and transparency.</b> <br> <br>
+        </h1>
+    {/if}
 
     <h1 class="center-text">Please leave any <b>additional opinion and feedback</b> about the experiment :)</h1>
     <FeedbackWindow

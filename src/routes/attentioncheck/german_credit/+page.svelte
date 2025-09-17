@@ -38,7 +38,8 @@
             isLoading = true;
             logAttentionCheck(user_id, attention_check_counter, selected_statement, correct_statement);
             // Use correct function or method for redirection
-            await goto(`${base}/experiment?user_id=${user_id}&sg=${study_group}`);
+            const route = study_group === 'baseline' ? 'baseline' : 'experiment';
+            await goto(`${base}/${route}?user_id=${user_id}&sg=${study_group}`);
             isLoading = false;
             return; // Prevent further execution
         }
@@ -53,20 +54,28 @@
             await alert("ATTENTION: You have selected the wrong answer twice. We ask you to return the study. Please close the survey and click " +
                 "'Stop Without Completing' on Prolific.");
             isLoading = true;
-            await goto(`${base}/experiment?user_id=${user_id}&sg=${study_group}`);
+            const route = study_group === 'baseline' ? 'baseline' : 'experiment';
+            await goto(`${base}/${route}?user_id=${user_id}&sg=${study_group}`);
             isLoading = false;
         }
     }
 </script>
 
 <div class="modal">
-    <h2>This experiment has three parts as described before. In the learning part, you'll try to guess what the machine
-        learning model will predict. After guessing, you'll see the model's actual prediction and get explanations to
-        understand its reasoning. In the testing parts, you'll make similar guesses without seeing the model's
-        reasoning,
-        using what you learned earlier. Your guesses are about if the machine learning model predicts that an individual
-        is a low or high risk loan applicant. You'll go through several rounds of this process to
-        better grasp how the model makes predictions about different people's earnings.</h2>
+{#if study_group === 'baseline'}
+        <h2>This experiment has three parts as described before. In the prediction part, you'll try to guess what the machine
+            learning model will predict. After guessing, you'll see the model's actual prediction and compare your results.
+            In the testing parts, you'll make similar guesses to test your ability to predict what the model will decide.
+            Your guesses are about if the machine learning model predicts that an individual is a low or high risk loan applicant.
+            You'll go through several rounds of this process to see how well you can predict the model's decisions.</h2>
+    {:else}
+        <h2>This experiment has three parts as described before. In the learning part, you'll try to guess what the machine
+            learning model will predict. After guessing, you'll see the model's actual prediction and get explanations to
+            understand its reasoning. In the testing parts, you'll make similar guesses without seeing the model's
+            reasoning, using what you learned earlier. Your guesses are about if the machine learning model predicts that an individual
+            is a low or high risk loan applicant. You'll go through several rounds of this process to
+            better grasp how the model makes predictions about different people's earnings.</h2>
+    {/if}
     <br>
     {#if isLoading}
         <Spinner dark_background={false}/>

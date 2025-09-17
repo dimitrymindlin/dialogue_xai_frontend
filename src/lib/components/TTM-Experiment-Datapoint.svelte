@@ -29,7 +29,7 @@
     // Get dataset-specific configuration
     $: datasetConfig = getDatasetConfig(dataset);
     $: prediction_question = datasetConfig.predictionQuestion;
-    $: introduction_test_intro = datasetConfig.introTestDescription;
+    $: introduction_test_intro = interactiveOrStatic === 'baseline' ? datasetConfig.introTestDescriptionBaseline : datasetConfig.introTestDescription;
 
     export let confidence_level = "-1";
     export let feedback = "";
@@ -39,16 +39,22 @@
         teaching_intro = "Task: <b>Guess what the model will predict</b>, based on the information below. Afterward, you can read the explanations to <b>understand the model's prediction</b>.";
     } else if (interactiveOrStatic === 'interactive') {
         teaching_intro = "Task: <b>Guess what the model will predict</b>, based on the information below. Afterward, you can ask questions to <b>understand the model's prediction</b>.";
+    } else if (interactiveOrStatic === 'baseline') {
+        teaching_intro = "Task: <b>Guess what the model will predict</b>, based on the information below. Afterward, you will see <b>the model's prediction</b>.";
     } else { // chat
         teaching_intro = "Task: <b>Guess what the model will predict</b>, based on the information below. Afterward, you can ask questions to <b>understand the model's prediction</b>.";
     }
 
-    export let test_intro =
-        "<b>Test your knowledge</b> about the model. <br> What do you think the model will predict for this case? <br> </b> <b>Note</b>: You will not receive \n" +
+    // Reactive test intro text based on condition
+    $: test_intro = interactiveOrStatic === 'baseline' 
+        ? "<b>Test your ability</b> to predict what the model will decide. <br> What do you think the model will predict for this case? <br> <b><span style=\"color: purple;\">Purple rows</span></b> indicate changes in the attribute values with the old value (previous screen) struck through."
+        : "<b>Test your knowledge</b> about the model. <br> What do you think the model will predict for this case? <br> </b> <b>Note</b>: You will not receive \n" +
         "explanations this time. <br> <b><span style=\"color: purple;\">Purple rows</span></b> indicate changes in the attribute values with the old value (previous screen) struck through.";
 
-    export let final_test_intro =
-        "Final test of your knowledge about the <b>model's decision process</b>.<br> Based on what you learned before, what do you think the <b>model will predict</b> for this case? <br> <b>Note:</b> You will not receive \n" +
+    // Reactive final test intro text based on condition  
+    $: final_test_intro = interactiveOrStatic === 'baseline'
+        ? "Final test of your ability to predict the <b>model's decisions</b>.<br> Based on the predictions you've seen before, what do you think the <b>model will predict</b> for this case?"
+        : "Final test of your knowledge about the <b>model's decision process</b>.<br> Based on what you learned before, what do you think the <b>model will predict</b> for this case? <br> <b>Note:</b> You will not receive \n" +
         "explanations this time.";
 
     export let datapoint_count: number | null = null;
@@ -204,7 +210,9 @@
             <p class="mb-3 centered-text">{@html test_intro}</p>
         {/if}
         {#if experimentPhase === 'teaching'}
-            <h2 style="text-align: center; color: green;">Learning Phase</h2>
+            <h2 style="text-align: center; color: green;">
+                {interactiveOrStatic === 'baseline' ? 'Prediction Phase' : 'Learning Phase'}
+            </h2>
             <p class="mb-3 text-xs centered-text">{@html teaching_intro}</p>
         {/if}
         {#if experimentPhase === 'final-test'}

@@ -40,7 +40,8 @@
             isLoading = true;
             logAttentionCheck(user_id, attention_check_counter, selected_statement, correct_statement);
             // Use correct function or method for redirection
-            await goto(`${base}/experiment?user_id=${user_id}&sg=${study_group}&user_ml_knowledge=${user_ml_knowledge}`);
+            const route = study_group === 'baseline' ? 'baseline' : 'experiment';
+            await goto(`${base}/${route}?user_id=${user_id}&sg=${study_group}&user_ml_knowledge=${user_ml_knowledge}`);
             isLoading = false;
             return; // Prevent further execution
         }
@@ -55,23 +56,36 @@
             await alert("ATTENTION: You have selected the wrong answer twice. We ask you to return the study. Please close the survey and click " +
                 "'Stop Without Completing' on Prolific.");
             isLoading = true;
-            await goto(`${base}/experiment?user_id=${user_id}&sg=${study_group}`);
+            const route = study_group === 'baseline' ? 'baseline' : 'experiment';
+            await goto(`${base}/${route}?user_id=${user_id}&sg=${study_group}`);
             isLoading = false;
         }
     }
 </script>
 
 <div class="modal">
-    <h2>This experiment is divided into three parts. First, in the learning phase, you’ll see a person’s profile and
-        guess whether the AI model predicts they earn more or less than $50,000 per year. After making your guess,
-        you’ll see the AI’s actual prediction along with explanations to help you understand its reasoning.
+{#if study_group === 'baseline'}
+        <h2>This experiment is divided into three parts. First, in the prediction phase, you'll see a person's profile and
+            guess whether the AI model predicts they earn more or less than $50,000 per year. After making your guess,
+            you'll see the AI's actual prediction and compare your results.
 
-        Next comes the testing phase, where you’ll make similar guesses—but this time, you won’t see the AI’s
-        explanation. Instead, you’ll rely on what you’ve learned so far.
+            Next comes the testing phase, where you'll make similar guesses to test your ability to predict what the AI will decide.
 
-        Finally, in the final testing phase, you’ll go through multiple rounds to deepen your understanding of how the
-        AI makes decisions.
-    </h2>
+            Finally, in the final testing phase, you'll go through multiple rounds to see how well you can predict the
+            AI's decisions.
+        </h2>
+    {:else}
+        <h2>This experiment is divided into three parts. First, in the learning phase, you'll see a person's profile and
+            guess whether the AI model predicts they earn more or less than $50,000 per year. After making your guess,
+            you'll see the AI's actual prediction along with explanations to help you understand its reasoning.
+
+            Next comes the testing phase, where you'll make similar guesses—but this time, you won't see the AI's
+            explanation. Instead, you'll rely on what you've learned so far.
+
+            Finally, in the final testing phase, you'll go through multiple rounds to deepen your understanding of how the
+            AI makes decisions.
+        </h2>
+    {/if}
     <br>
     {#if isLoading}
         <Spinner dark_background={false}/>

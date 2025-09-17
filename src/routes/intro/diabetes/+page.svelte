@@ -210,17 +210,29 @@
             <!-- Learning Phase -->
             <h2 class="text-2xl">Experiment Structure</h2>
             <div class="container">
-                <h3><b style="color: green;">Learning Phase:</b></h3>
-                <ol>
-                    <li>1. <b>Make a Guess:</b> Look at another person's medical information and make a prediction.
-                    </li>
-                    <li>2. <b>See what the AI thinks:</b> Check the AI's prediction.</li>
-                    <li>3. <b>Ask Why:</b> You can explore why the AI made that decision by asking questions.
-                    </li>
-                    <li>4. <b>Proceed:</b> Once you're ready, move on by clicking <b>Proceed</b>.
-                    </li>
-                </ol>
-                {#if study_group === 'interactive'}
+{#if study_group === 'baseline'}
+                    <h3><b style="color: green;">Prediction Phase:</b></h3>
+                    <ol>
+                        <li>1. <b>Make a Guess:</b> Look at another person's medical information and make a prediction.</li>
+                        <li>2. <b>See what the AI thinks:</b> Check the AI's prediction.</li>
+                        <li>3. <b>Compare Results:</b> See if you matched the AI's prediction.</li>
+                        <li>4. <b>Continue:</b> Move on to the next person by clicking <b>Next</b>.</li>
+                    </ol>
+                {:else}
+                    <h3><b style="color: green;">Learning Phase:</b></h3>
+                    <ol>
+                        <li>1. <b>Make a Guess:</b> Look at another person's medical information and make a prediction.</li>
+                        <li>2. <b>See what the AI thinks:</b> Check the AI's prediction.</li>
+                        <li>3. <b>Ask Why:</b> You can explore why the AI made that decision by asking questions.</li>
+                        <li>4. <b>Proceed:</b> Once you're ready, move on by clicking <b>Proceed</b>.</li>
+                    </ol>
+                {/if}
+{#if study_group === 'baseline'}
+                    <!-- No GIF for baseline - simpler flow -->
+                    <p style="text-align: center; font-style: italic; color: #666; margin-top: 20px;">
+                        In this condition, you'll simply see the model's prediction after making your guess.
+                    </p>
+                {:else if study_group === 'interactive'}
                     <ToggleableGif alt="Step2 gif" src={step2_gif_path_interactive} smallSize="35vw" largeSize="100vw" />
                 {:else if study_group === 'chat'}
                     <ToggleableGif alt="Step2 gif" src={step2_gif_path_chat} smallSize="35vw" largeSize="100vw" />

@@ -206,17 +206,25 @@
             <!-- Learning Phase -->
             <h2 class="text-2xl">Experiment Structure</h2>
             <div class="container">
-                <h3><b style="color: green;">Learning Phase:</b> After guessing the applicants risk level,</h3>
-                <p>you will see the Machine Learning model's prediction and get explanations for the prediction.</p>
-                {#if study_group === 'interactive'}
-                    {@html study_group_interactive_text}
-                    <img alt="Step2 gif" src={step2_gif_path_interactive} style="height: 50vh;"/>
+{#if study_group === 'baseline'}
+                    <h3><b style="color: green;">Prediction Phase:</b> After guessing the applicant's risk level,</h3>
+                    <p>you will see the Machine Learning model's prediction and compare your results.</p>
+                    <p style="text-align: center; font-style: italic; color: #666; margin-top: 20px;">
+                        In this condition, you'll simply see the model's prediction after making your guess.
+                    </p>
+                    <p>When you're ready to continue, click <b>Next</b>.</p>
                 {:else}
-                    {@html study_group_static_text}
-                    <img alt="Step2 gif" src={step2_gif_path_static} style="height: 50vh;"/>
+                    <h3><b style="color: green;">Learning Phase:</b> After guessing the applicant's risk level,</h3>
+                    <p>you will see the Machine Learning model's prediction and get explanations for the prediction.</p>
+                    {#if study_group === 'interactive'}
+                        {@html study_group_interactive_text}
+                        <img alt="Step2 gif" src={step2_gif_path_interactive} style="height: 50vh;"/>
+                    {:else}
+                        {@html study_group_static_text}
+                        <img alt="Step2 gif" src={step2_gif_path_static} style="height: 50vh;"/>
+                    {/if}
+                    <p>When you feel that you understand the reason for the model's decision, continue by clicking <b>Proceed</b>.</p>
                 {/if}
-                <p>When you feel that you understand the reason for the model's decision, continue by clicking <b>Proceed</b>.
-                </p>
             </div>
         </Step>
         <Step>
