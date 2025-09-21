@@ -802,6 +802,11 @@
     // Add environment variable for message icon
     const SPEECH_RECOGNITION = import.meta.env.VITE_SPEECH_RECOGNITION === 'true';
     const STREAMING_OPTION = import.meta.env.VITE_STREAMING_OPTION !== 'false'; // Default: true
+    const SHOW_MIC_BUTTON = String(import.meta.env.VITE_SHOW_MIC_BUTTON ?? 'true').toLowerCase() === 'true';
+    const SHOW_VOICE_RECOGNITION_BUTTON = String(import.meta.env.VITE_SHOW_VOICE_RECOGNITION_BUTTON ?? 'true').toLowerCase() === 'true';
+    const SHOW_MUTE_BUTTON = String(import.meta.env.VITE_SHOW_MUTE_BUTTON ?? 'true').toLowerCase() === 'true';
+    const SHOW_TTS_BUTTON = String(import.meta.env.VITE_SHOW_TTS_BUTTON ?? 'true').toLowerCase() === 'true';
+    const VOICE_FEATURES_VISIBLE = SPEECH_RECOGNITION && (SHOW_MIC_BUTTON || SHOW_VOICE_RECOGNITION_BUTTON);
     
     // Cleanup on component destroy
     onDestroy(() => {
@@ -819,6 +824,7 @@
             <div class="header-row">
                 <span>Chatbot</span>
                 <div class="tts-controls">
+                    {#if SHOW_TTS_BUTTON}
                     <div class="tts-toggle">
                         <label class="switch">
                             <input type="checkbox" bind:checked={ttsEnabled}>
@@ -826,6 +832,8 @@
                         </label>
                         <span class="tts-label">TTS</span>
                     </div>
+                    {/if}
+                    {#if SHOW_MUTE_BUTTON}
                     <button 
                         class="mute-button {!ttsEnabled ? 'disabled' : ''}" 
                         on:click={() => ttsMuted = !ttsMuted}
@@ -838,6 +846,7 @@
                             <i class="fas fa-volume-up"></i>
                         {/if}
                     </button>
+                    {/if}
                 </div>
             </div>
         </Header>
@@ -878,9 +887,10 @@
                 />
             </div>
             
-            {#if SPEECH_RECOGNITION}
+            {#if VOICE_FEATURES_VISIBLE}
                 <!-- Show only microphone and speech icons -->
                 <div class="voice-recognition-section">
+                    {#if SHOW_MIC_BUTTON}
                     <button 
                         type="button"
                         class="microphone-button {isRecording ? 'recording' : ''} {isProcessingSpeech ? 'processing' : ''}"
@@ -896,6 +906,7 @@
                             <i class="fas fa-microphone"></i>
                         {/if}
                     </button>
+                    {/if}
                     <div class="voice-wave-container {isRecording ? 'active' : ''}">
                         {#if isRecording}
                             <div class="voice-wave">
@@ -905,7 +916,7 @@
                                 <span class="wave-bar"></span>
                                 <span class="wave-bar"></span>
                             </div>
-                        {:else}
+                        {:else if SHOW_VOICE_RECOGNITION_BUTTON}
                             <button 
                                 type="button"
                                 class="sound-wave-button {isVoiceMode ? 'active' : ''}"
@@ -916,6 +927,8 @@
                                     <div class="voice-circle {isVoiceMode ? (isVoiceProcessing ? 'processing' : 'spinning') : ''}"></div>
                                 </div>
                             </button>
+                        {:else}
+                            <!-- hidden -->
                         {/if}
                     </div>
                 </div>
