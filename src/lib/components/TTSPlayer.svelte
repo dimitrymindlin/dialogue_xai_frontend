@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onDestroy, createEventDispatcher } from 'svelte';
     import OpenAI from 'openai';
+    import { env as publicEnv } from '$env/dynamic/public';
 
     export let enabled: boolean = false;
     export let voice: string = 'coral';
@@ -11,7 +12,7 @@
     let busy: boolean = false;
     let audio: HTMLAudioElement | null = null;
     let currentUrl: string | null = null;
-    const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.PUBLIC_OPENAI_API_KEY;
+    const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.PUBLIC_OPENAI_API_KEY || publicEnv.PUBLIC_OPENAI_API_KEY;
     let client: OpenAI | null = null;
     
     // Streaming TTS state
@@ -21,6 +22,8 @@
     let streamingQueue: string[] = [];
     let currentlyPlaying: boolean = false;
     let activeAudios: Set<HTMLAudioElement> = new Set();
+    let audioUrls: Map<HTMLAudioElement, string> = new Map();
+    const MAX_CHUNK_CHARS = 400; // smaller chunks for faster first-audio latency
 
     const dispatch = createEventDispatcher();
     console.log('[TTS] Component mounted, enabled:', enabled, 'API key available:', !!OPENAI_API_KEY);
@@ -46,6 +49,24 @@
             audio.currentTime = 0;
         }
         cleanupAudioUrl();
+    }
+
+    function stopAllActiveAudio() {
+        try {
+            activeAudios.forEach((a) => {
+                try { a.pause(); } catch {}
+                try { a.currentTime = 0; } catch {}
+                try {
+                    const url = audioUrls.get(a);
+                    if (url) {
+                        URL.revokeObjectURL(url);
+                        audioUrls.delete(a);
+                    }
+                } catch {}
+            });
+        } finally {
+            activeAudios.clear();
+        }
     }
 
     // Add streaming text chunk
@@ -146,6 +167,7 @@
             return;
         }
         
+        const t0 = performance.now();
         console.log('[TTS] Synthesizing:', text.substring(0, 50) + '...');
         
         try {
@@ -155,12 +177,14 @@
                 voice,
                 input: text,
                 instructions,
-                response_format: 'wav' // Use wav for fastest response
+                response_format: 'mp3' // smaller payload for faster download
             });
             
             // Convert response to blob and play immediately
             const arrayBuffer = await response.arrayBuffer();
-            const blob = new Blob([arrayBuffer], { type: 'audio/wav' });
+            const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+            const t1 = performance.now();
+            console.log('[TTS] Audio received in', Math.round(t1 - t0), 'ms, size:', Math.round(arrayBuffer.byteLength/1024), 'KB');
             
             // Create temporary audio for this chunk
             const chunkAudio = new Audio();
@@ -168,14 +192,16 @@
             
             return new Promise<void>((resolve, reject) => {
                 chunkAudio.onended = () => {
-                    URL.revokeObjectURL(chunkUrl);
+                    try { URL.revokeObjectURL(chunkUrl); } catch {}
                     activeAudios.delete(chunkAudio);
+                    audioUrls.delete(chunkAudio);
                     resolve();
                 };
                 
                 chunkAudio.onerror = (e) => {
-                    URL.revokeObjectURL(chunkUrl);
+                    try { URL.revokeObjectURL(chunkUrl); } catch {}
                     activeAudios.delete(chunkAudio);
+                    audioUrls.delete(chunkAudio);
                     reject(e);
                 };
                 
@@ -184,9 +210,17 @@
                 chunkAudio.volume = muted ? 0 : 1;
                 console.log('[TTS] Chunk audio muted state set to:', muted);
                 activeAudios.add(chunkAudio);
+                audioUrls.set(chunkAudio, chunkUrl);
                 
                 dispatch('ttsstart');
-                chunkAudio.play();
+                const playPromise = chunkAudio.play();
+                if (playPromise && typeof playPromise.then === 'function') {
+                    playPromise.catch((e: any) => {
+                        console.warn('[TTS] Audio play() was blocked or failed:', e?.name || e);
+                        // Resolve to avoid deadlock; user can unmute/gesture and retrigger later
+                        resolve();
+                    });
+                }
             });
         } catch (e) {
             console.error('TTS synthesis error:', e);
@@ -204,7 +238,31 @@
         // Clear any ongoing streaming
         stopStreaming();
         
-        // Use the core TTS function
+        // If text is very long, split into manageable chunks and queue
+        if (trimmed.length > MAX_CHUNK_CHARS) {
+            console.log('[TTS] Long text detected, chunking for synthesis. length:', trimmed.length);
+            const sentences = trimmed.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [trimmed];
+            let currentChunk = '';
+            for (const s of sentences) {
+                const piece = s.trim();
+                if (!piece) continue;
+                if ((currentChunk + ' ' + piece).trim().length > MAX_CHUNK_CHARS) {
+                    streamingQueue.push(currentChunk.trim());
+                    currentChunk = piece;
+                } else {
+                    currentChunk = (currentChunk ? currentChunk + ' ' : '') + piece;
+                }
+            }
+            if (currentChunk.trim()) {
+                streamingQueue.push(currentChunk.trim());
+            }
+            if (!currentlyPlaying) {
+                playNextInQueue();
+            }
+            return;
+        }
+        
+        // Use the core TTS function for shorter text
         try {
             currentlyPlaying = true;
             await speakText(trimmed);
@@ -215,6 +273,16 @@
 
     // Reactive debug log
     $: console.log('[TTS] enabled changed to:', enabled);
+    
+    // When toggled off, immediately stop everything and reset state
+    $: if (!enabled) {
+        stopStreaming();
+        stopAudio();
+        stopAllActiveAudio();
+        currentlyPlaying = false;
+        // Notify parent that playback ended
+        dispatch('ttsend');
+    }
     
     // Apply mute state to audio element when muted prop changes
     $: {

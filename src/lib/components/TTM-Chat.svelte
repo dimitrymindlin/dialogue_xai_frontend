@@ -1,6 +1,6 @@
 <script lang="ts">
     import type {TChatMessage} from '$lib/types';
-    import {afterUpdate, beforeUpdate} from 'svelte';
+    import {afterUpdate, beforeUpdate, onDestroy} from 'svelte';
     import Header from './Header.svelte';
     import TTSPlayer from '$lib/components/TTSPlayer.svelte';
     import Message from './Message.svelte';
@@ -11,7 +11,6 @@
     import {getDatasetConfig} from '$lib/dataset-configs';
     import {env} from '$env/dynamic/public';
     const PUBLIC_BACKEND_URL = env.PUBLIC_BACKEND_URL;
-    import { userDemographics } from '$lib/stores';
     import { userDemographics } from '$lib/stores';
 
     export let messages: TChatMessage[] = [];
@@ -41,59 +40,13 @@
     let lastSpokenMessageId: number | null = null;
     let isTTSAudioPlaying: boolean = false; // gate STT resume while TTS is speaking
     let instructions: string = "Speak in a cheerful and positive tone, speak at 3x speed";
-    // Debug TTS state changes
-    $: console.log('[TTS] Toggle state changed:', ttsEnabled, 'ttsRef available:', !!ttsRef, 'muted:', ttsMuted);
-    let isVoiceMode = false; // Voice recognition mode
-    let voiceRecognition: any = null;
-    let voiceTranscript = '';
-    let silenceTimer: any = null;
-    let isVoiceProcessing = false;
-    let processingWatchdog: any = null;
-    let demographicsGatePending = false; // Resume mic only after demographics chunk
-    let ttsEnabled: boolean = false;
-    let ttsMuted: boolean = false;
-    let ttsRef: any = null;
-    let lastSpokenMessageId: number | null = null;
-    let isTTSAudioPlaying: boolean = false; // gate STT resume while TTS is speaking
-    let instructions: string = "Speak in a cheerful and positive tone, speak at 3x speed";
+    let useEnUSLang: boolean = true; // Old behavior default; retry without lang if not supported
     // Debug TTS state changes
     $: console.log('[TTS] Toggle state changed:', ttsEnabled, 'ttsRef available:', !!ttsRef, 'muted:', ttsMuted);
 
     // Get dataset-specific configuration including chat suggestions
     $: datasetConfig = getDatasetConfig(dataset);
     $: chatSuggestions = datasetConfig.chatSuggestions;
-    function startProcessingWatchdog() {
-        if (processingWatchdog) {
-            clearTimeout(processingWatchdog);
-            processingWatchdog = null;
-        }
-        // Force recovery if we get stuck in processing
-        processingWatchdog = setTimeout(() => {
-            try {
-                if (isVoiceMode && isVoiceProcessing) {
-                    // Also ensure TTS playback has finished before resuming
-                    if (!demographicsGatePending && !isTTSAudioPlaying) {
-                        console.warn('Processing watchdog fired - forcing resume');
-                        isVoiceProcessing = false;
-                        startVoiceRecognition();
-                    } else {
-                        console.warn('Processing watchdog fired but demographics not received yet; keeping mic paused');
-                    }
-                }
-            } catch (e) {
-                console.error('Watchdog resume error:', e);
-                isVoiceProcessing = false;
-            }
-        }, 8000);
-    }
-
-    function clearProcessingWatchdog() {
-        if (processingWatchdog) {
-            clearTimeout(processingWatchdog);
-            processingWatchdog = null;
-        }
-    }
-
     function startProcessingWatchdog() {
         if (processingWatchdog) {
             clearTimeout(processingWatchdog);
@@ -286,7 +239,6 @@
         // --- End loading logic ---
 
         voiceTranscript = '';
-        voiceTranscript = '';
         
         if (STREAMING_OPTION) {
             // Use streaming API
@@ -450,8 +402,6 @@
 
                 clearProcessingWatchdog();
                 demographicsGatePending = false;
-                clearProcessingWatchdog();
-                demographicsGatePending = false;
                 
                 // Create AI message for error if not created yet
                 if (!hasCreatedAiMessage) {
@@ -514,11 +464,12 @@
                     };
                     messages = [...messages, aiMessage]; // Add new message
 
-                    // TTS: speak non-streaming response
+                    // TTS: speak as soon as text is available (skip UI extras)
                     if (ttsEnabled && ttsRef && aiMessage.text) {
-                        console.log('[TTS] Speaking non-streaming response, messageId:', aiMessage.id);
-                        try { 
-                            ttsRef.speak(String(aiMessage.text)); 
+                        console.log('[TTS] Speaking non-streaming response (ASAP), messageId:', aiMessage.id);
+                        try {
+                            // Send only the text; chunking is handled inside TTSPlayer
+                            ttsRef.speak(String(aiMessage.text));
                             lastSpokenMessageId = Number(aiMessage.id);
                         } catch (e) { console.warn('TTS speak error', e); }
                     }
@@ -608,6 +559,8 @@
         }
     }
 
+    // (Removed helper functions to match old implementation)
+
     function startVoiceRecognition() {
         try {
             console.log('startVoiceRecognition called - current state:', { isVoiceMode, isVoiceProcessing, hasExistingRecognition: !!voiceRecognition });
@@ -621,7 +574,6 @@
                 }
                 voiceRecognition = null;
             }
-            
             // @ts-ignore
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
@@ -632,8 +584,13 @@
             voiceRecognition = new SpeechRecognition();
             voiceRecognition.continuous = true;
             voiceRecognition.interimResults = true;
-            voiceRecognition.lang = 'en-US';
-
+            if (useEnUSLang) {
+                try {
+                    voiceRecognition.lang = 'en-US';
+                } catch {}
+            }
+            
+            // Inline handlers (old behavior)
             voiceRecognition.onstart = () => {
                 isVoiceMode = true;
                 console.log('Voice recognition started - isVoiceMode:', isVoiceMode);
@@ -655,20 +612,16 @@
                 voiceTranscript = finalTranscript || interimTranscript;
                 inputMessage = voiceTranscript;
                 
-                // Clear existing timer
                 if (silenceTimer) {
                     clearTimeout(silenceTimer);
                 }
                 
-                // Set new timer for auto-submit after 3 seconds of silence
                 if (voiceTranscript.trim()) {
                     silenceTimer = setTimeout(() => {
                         if (voiceTranscript.trim() && !isVoiceProcessing && isVoiceMode) {
                             console.log('Auto-submitting after silence:', voiceTranscript);
-                            // Set processing state before sending message
                             isVoiceProcessing = true;
                             sendMessage();
-                            // Clear transcript after sending
                             voiceTranscript = '';
                         }
                     }, 3000);
@@ -677,34 +630,30 @@
 
             voiceRecognition.onerror = (event: any) => {
                 console.error('Speech recognition error:', event.error);
-                
-                // Handle different error types
-                if (event.error === 'no-speech') {
-                    console.log('No speech detected - this is normal, continuing...');
-                    // Don't stop recognition for no-speech, it's normal
-                    return;
-                } else if (event.error === 'aborted') {
-                    console.log('Speech recognition aborted - this is normal');
-                    // Don't stop recognition for aborted, it's normal
+                if (event.error === 'no-speech' || event.error === 'aborted') {
                     return;
                 } else if (event.error === 'network') {
-                    console.error('Network error in speech recognition');
-                    // Stop for network errors
                     stopVoiceRecognition();
                 } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-                    console.error('Microphone access denied');
-                    // Stop for permission errors
                     stopVoiceRecognition();
+                } else if (event.error === 'language-not-supported') {
+                    console.warn('language-not-supported with en-US; retrying without explicit lang');
+                    try {
+                        useEnUSLang = false;
+                        stopVoiceRecognition();
+                        setTimeout(() => startVoiceRecognition(), 200);
+                    } catch (e) {
+                        console.error('Retry without lang failed:', e);
+                    }
                 } else {
+                    // Unknown errors: do not loop, keep running
                     console.error('Unknown speech recognition error:', event.error);
-                    // Don't stop for unknown errors, let it continue
                 }
             };
 
             voiceRecognition.onend = () => {
                 console.log('Voice recognition ended - isVoiceMode:', isVoiceMode, 'isVoiceProcessing:', isVoiceProcessing, 'isTTSAudioPlaying:', isTTSAudioPlaying);
                 if (isVoiceMode && !isVoiceProcessing) {
-                    // Only restart if not processing a message and TTS not playing
                     setTimeout(() => {
                         if (isVoiceMode && !isVoiceProcessing && !isTTSAudioPlaying && voiceRecognition) {
                             console.log('Restarting voice recognition after 3s idle...');
@@ -712,19 +661,18 @@
                                 voiceRecognition.start();
                             } catch (error) {
                                 console.error('Error restarting voice recognition:', error);
-                                // Reset state if restart fails
                                 isVoiceProcessing = false;
                             }
-                        } else if (isTTSAudioPlaying) {
-                            console.log('Deferring recognition restart because TTS is still playing');
                         }
                     }, 3000);
                 }
             };
 
-            voiceRecognition.start();
+            // Start recognition (old behavior)
+            try { voiceRecognition.start(); } catch (e) { console.error('Error starting voice recognition:', e); }
         } catch (error) {
-            console.error('Error starting voice recognition:', error);
+            console.error('Error in voice recognition setup:', error);
+            alert('Voice recognition setup failed. Please check your browser permissions and try again.');
         }
     }
 
@@ -784,7 +732,6 @@
                     
                     //const apiUrl = `${base}/speech-to-text`;
                     const apiUrl = PUBLIC_BACKEND_URL + "/speech-to-text";
-                    const apiUrl = 'http://localhost:4555/speech-to-text';
                     console.log('Sending audio to API:', apiUrl);
                     
                     
@@ -854,12 +801,9 @@
 
     // Add environment variable for message icon
     const SPEECH_RECOGNITION = import.meta.env.VITE_SPEECH_RECOGNITION === 'true';
-    const STREAMING_OPTION = import.meta.env.VITE_STREAMING_OPTION === 'true'; // Default: false
     const STREAMING_OPTION = import.meta.env.VITE_STREAMING_OPTION !== 'false'; // Default: true
     
     // Cleanup on component destroy
-    import { onDestroy } from 'svelte';
-    
     onDestroy(() => {
         stopVoiceRecognition();
     });
@@ -907,6 +851,7 @@
         <!-- Show progress message if the last message is from the user and no AI response yet -->
         {#if messages.length && messages[messages.length - 1].isUser}
             <ProgressMessage/>
+        {/if}
         {/if}
     </main>
 
