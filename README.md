@@ -26,7 +26,7 @@
 ## Study Flow
 Three phases of the experiment:
 
-![Study flow of the three experiment phases](docs/Study%20Flow.drawio.png)
+![Study flow of the three experiment phases](docs/Study%20Flow.drawio.pdf)
 
 If the image preview does not render, open the file directly: [Study Flow.drawio.pdf](docs/Study%20Flow.drawio.pdf)
 
