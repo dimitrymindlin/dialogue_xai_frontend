@@ -23,6 +23,13 @@
 - src/lib/routes/intro (contains the main components for the intro)
 - src/lib/routes/experiment (contains the main components for the experiment)
 
+## Study Flow
+Three phases of the experiment:
+
+![Study flow of the three experiment phases](docs/Study%20Flow.drawio.png)
+
+If the image preview does not render, open the file directly: [Study Flow.drawio.pdf](docs/Study%20Flow.drawio.pdf)
+
 ## Explanation strategies
 - **Static explanations** capture a fixed narrative about a model's behavior (e.g., feature importance tables, SHAP summaries). They are useful during design and validation when you want a snapshot of what the model is relying on without user interaction. Static explanations also work well for documentation or auditing the model once it is trained.
 - **Interactive explanations** let analysts or end users explore different inputs, drill into explanations, and see how changes affect decisions. They are key for debugging, trust-building, and education, especially when domain experts want to validate outcomes in real time.
