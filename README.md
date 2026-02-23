@@ -26,9 +26,9 @@
 ## Study Flow
 Three phases of the experiment:
 
-![Study flow of the three experiment phases](docs/Study%20Flow.drawio.pdf)
+![Study flow of the three experiment phases](docs/Study%20Flow.drawio.png)
 
-If the image preview does not render, open the file directly: [Study Flow.drawio.png](docs/Study%20Flow.drawio.pdf)
+If the image preview does not render, open the file directly: [Study Flow.drawio.pdf](docs/Study%20Flow.drawio.pdf)
 
 ## Explanation strategies
 - **Static explanations** capture a fixed narrative about a model's behavior (e.g., feature importance tables, SHAP summaries). They are useful during design and validation when you want a snapshot of what the model is relying on without user interaction. Static explanations also work well for documentation or auditing the model once it is trained.
